@@ -26,7 +26,6 @@ files = list(glob.glob("data/orig/FSD50K.dev_audio/*wav")) + list(
 CONFIG = json.loads(open("config.json").read())
 
 def ensure_length(x, length_in_samples):
-    print(length_in_samples)
     if len(x) < length_in_samples:
         npad = length_in_samples - len(x)
         nstart = random.randint(0, npad)
@@ -42,7 +41,7 @@ def ensure_length(x, length_in_samples):
 LENGTH_SAMPLES = [
     (l, int(round(CONFIG["SAMPLE_RATE"] * l))) for l in CONFIG["AUDIO_LENGTHS"]
 ]
-for f in tqdm(files[:200]):
+for f in tqdm(files):
     newf = f.replace("/orig/", "/preprocessed/")
     newd = os.path.split(newf)[0]
     if not os.path.exists(newd):
