@@ -23,14 +23,18 @@ def note_to_freq(note):
     return (a / 32) * (2 ** ((note - 9) / 12))
 
 
+# https://pysox.readthedocs.io/en/latest/api.html
+# The format of each element here is:
+# (transform name, [(continuous parameter, min, max), ...], [(categorical parameter, [values])])
+# TODO: Add other transforms from JND paper?
 transforms = [
-    ("allpass", [("midi", 21, 108), ("width_q", 1, 10)], []),
+    ("allpass", [("midi", 21, 108), ("width_q", 0.1, 5)], []),
     (
         "bandpass",
-        [("midi", 21, 108), ("width_q", 1, 10)],
+        [("midi", 21, 108), ("width_q", 0.1, 5)],
         [("constant_skirt", [True, False])],
     ),
-    ("bandreject", [("midi", 21, 108), ("width_q", 1, 10)], []),
+    ("bandreject", [("midi", 21, 108), ("width_q", 0.1, 5)], []),
     ("bass", [("gain_db", -20, 20), ("midi", 21, 108), ("slope", 0.3, 1.0)], []),
     # bend
     (
@@ -50,7 +54,7 @@ transforms = [
     ("contrast", [("amount", 0, 100)], []),
     # delays and decays and n_echos
     ("echo", [("gain_in", 0, 1), ("gain_out", 0, 1)], []),
-    ("equalizer", [("midi", 21, 108), ("gain_db", -20, 20), ("width_q", 1, 10)], []),
+    ("equalizer", [("midi", 21, 108), ("gain_db", -20, 20), ("width_q", 0.1, 5)], []),
     (
         "fade",
         [("fade_in_len", 0, 2), ("fade_out_len", 0, 2)],
@@ -77,6 +81,48 @@ transforms = [
             ("balance", [None, "e", "B", "b"]),
         ],
     ),
+    ("highpass", [("midi", 21, 108), ("width_q", 0.1, 5)], [("n_poles", [1, 2])]),
+    # loudness: Loudness control. Similar to the gain effect, but
+    # provides equalisation for the human auditory system.
+    ("lowpass", [("midi", 21, 108), ("width_q", 0.1, 5)], [("n_poles", [1, 2])]),
+    # mcompand
+    # noisered
+    # This might be too extreme?
+    ("overdrive", [("gain_db", -40, 40), ("colour", -40, 40)], []),
+    (
+        "phaser",
+        [
+            ("gain_in", 0, 1),
+            ("gain_out", 0, 1),
+            ("delay", 0, 5),
+            ("decay", 0.1, 0.5),
+            ("speed", 0.1, 2),
+        ],
+        [("modulation_shape", ["sinusoidal", "triangular"])],
+    ),
+    ("pitch", ["n_semitones", (-12, 12)], [("quick", [True, False])]),
+    # rate
+    (
+        "reverb",
+        [
+            ("reverberance", 0, 100),
+            ("high_freq_damping", 0, 100),
+            ("room_scale", 0, 100),
+            ("stereo_depth", 0, 100),
+            ("pre_delay", 0, 1000),
+            ("wet_gain", -20, 20),
+        ],
+        [("wet_only", [True, False])],
+    ),
+    ("speed", [("factor", 0.5, 1.5)], []),
+    ("stretch", [("factor", 0.5, 1.5)], [("window", [10, 20, 50])]),
+    (
+        "tempo",
+        [("factor", 0.5, 1.5)],
+        [("audio_type", ["m", "s", "l"]), ("quick", [True, False])],
+    ),
+    ("treble", [("gain_db", -20, 20), ("midi", 21, 108), ("slope", 0.3, 1.0)], []),
+    ("tremolo", [("speed", 0.1, 10.0), ("depth", 0, 100)], []),
 ]
 
 
