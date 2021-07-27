@@ -63,7 +63,7 @@ for f in tqdm(files):
     # We use 48K since that is OpenL3's SR
     if sr != CONFIG["SAMPLE_RATE"]:
         print(f"Resampling {f}")
-        x = resampy.resample(sr, CONFIG["SAMPLE_RATE"])
+        x = resampy.resample(x, sr, CONFIG["SAMPLE_RATE"])
         sr = CONFIG["SAMPLE_RATE"]
 
     for length, samples in LENGTH_SAMPLES:
