@@ -27,35 +27,6 @@ files = list(glob.glob("data/orig/FSD50K.dev_audio/*wav")) + list(
 
 CONFIG = json.loads(open("config.json").read())
 
-
-class FFProbeResult(NamedTuple):
-    return_code: int
-    json: str
-    error: str
-
-
-def ffprobe(file_path) -> FFProbeResult:
-    command_array = [
-        "ffprobe",
-        "-v",
-        "quiet",
-        "-print_format",
-        "json",
-        "-show_format",
-        "-show_streams",
-        file_path,
-    ]
-    result = subprocess.run(
-        command_array,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    return FFProbeResult(
-        return_code=result.returncode, json=result.stdout, error=result.stderr
-    )
-
-
 def ensure_length(x, length_in_samples):
     print(length_in_samples)
     if len(x) < length_in_samples:
