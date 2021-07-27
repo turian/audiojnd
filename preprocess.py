@@ -61,6 +61,7 @@ for f in tqdm(files):
         print(f"Skipping {f} {x.shape}...")
         continue
     # We use 48K since that is OpenL3's SR
+    # TODO: Might be faster to use sox+ffmpeg?
     if sr != CONFIG["SAMPLE_RATE"]:
         print(f"Resampling {f}")
         x = resampy.resample(x, sr, CONFIG["SAMPLE_RATE"])
