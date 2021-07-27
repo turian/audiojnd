@@ -12,8 +12,6 @@ import glob
 import json
 import os.path
 import random  # We don't seed, we just want something different every time
-import subprocess
-from typing import NamedTuple
 
 import librosa
 import numpy as np
