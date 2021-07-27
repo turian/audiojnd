@@ -47,14 +47,20 @@ for f in tqdm(files):
     if not os.path.exists(newd):
         os.makedirs(newd)
 
-    # TODO: Skip files we have already done
-    # done = True
-    # for length, samples in LENGTH_SAMPLES:
+    # Skip files we have already done
+    done = True
+    for length, samples in LENGTH_SAMPLES:
+        if not os.path.exists(newf + "-%.2f.ogg" % length):
+            done = False
+            break
+    if done:
+        continue
 
     x, sr = sf.read(f)
     if x.shape == 2:
         print(f"Skipping {f} {x.shape}...")
         continue
+    # We use 48K since that is OpenL3's SR
     if sr != CONFIG["SAMPLE_RATE"]:
         print(f"Resampling {f}")
         x = resampy.resample(sr, CONFIG["SAMPLE_RATE"])
