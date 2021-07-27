@@ -161,6 +161,17 @@ def transform_file(f):
     tfm.__getattribute__(transform)(**params)
     tfm.build_file(f, outf)
 
+    """
+    # TODO: Different openl3 model?
+    import torch
+    import torchopenl3
+    x1, sr1 = sf.read(f)
+    emb1, ts1 = torchopenl3.get_audio_embedding(x1, sr1)
+    x2, sr2 = sf.read(outf)
+    emb2, ts2 = torchopenl3.get_audio_embedding(x2, sr2)
+    # TODO: Use a different distance
+    print(torch.mean(torch.abs(emb1 - emb2)).item())
+    """
 
 for f in tqdm(list(glob.glob("data/preprocessed/*/*.ogg"))):
     transform_file(f)
