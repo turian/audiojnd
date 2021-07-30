@@ -68,8 +68,8 @@ for f in tqdm(files):
         sr = CONFIG["SAMPLE_RATE"]
 
     for length, samples in LENGTH_SAMPLES:
-        # Try up to 10 times to find a snippet that is not too silent
-        for i in range(10):
+        # Try up to 100 times to find a snippet that is not too silent
+        for i in range(100):
             xl = ensure_length(x, samples)
             # Normalize audio to max peak
             xl = np.max(np.abs(xl))

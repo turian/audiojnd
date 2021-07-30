@@ -1,5 +1,11 @@
 # audiojnd
+
 Audio pair JND
+
+Installation:
+```
+pip3 install tqdm
+```
 
 Usage:
 ```
