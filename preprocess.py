@@ -72,7 +72,7 @@ for f in tqdm(files):
         for i in range(100):
             xl = ensure_length(x, samples)
             # Normalize audio to max peak
-            if np.abs(xl) == 0:
+            if np.max(np.abs(xl)) == 0:
                 xl = None
             else:
                 xl /= np.max(np.abs(xl))
