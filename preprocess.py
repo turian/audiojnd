@@ -72,10 +72,14 @@ for f in tqdm(files):
         for i in range(100):
             xl = ensure_length(x, samples)
             # Normalize audio to max peak
-            xl /= np.max(np.abs(xl))
-            rms = np.mean(librosa.feature.rms(xl))
-            if rms < CONFIG["MIN_RMS"]:
+            if np.abs(xl) == 0:
                 xl = None
-            break
+            else:
+                xl /= np.max(np.abs(xl))
+                rms = np.mean(librosa.feature.rms(xl))
+                if rms < CONFIG["MIN_RMS"]:
+                    xl = None
+            else:
+                break
         if xl is not None:
             sf.write(newf + "-%.2f.ogg" % length, xl, CONFIG["SAMPLE_RATE"])
