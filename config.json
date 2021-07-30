@@ -1,0 +1,5 @@
+{
+"AUDIO_LENGTHS": [0.75, 3.0],
+"SAMPLE_RATE": 48000,
+"MIN_RMS": 1e-2
+}
