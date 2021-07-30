@@ -79,7 +79,7 @@ for f in tqdm(files):
                 rms = np.mean(librosa.feature.rms(xl))
                 if rms < CONFIG["MIN_RMS"]:
                     xl = None
-            else:
-                break
+                else:
+                    break
         if xl is not None:
             sf.write(newf + "-%.2f.ogg" % length, xl, CONFIG["SAMPLE_RATE"])
