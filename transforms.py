@@ -214,14 +214,17 @@ def transform_file(f):
 
 if __name__ == "__main__":
     files = list(glob.glob(f"data/preprocessed/FSD50K.dev_audio/*.{CONFIG['EXTENSION']}"))
-    random.shuffle(files)
+    # Always shuffle the files deterministically (seed 0),
+    # even if we use non-deterministic transforms of the audio.
+    rng = random.Random(0)
+    rng.shuffle(files)
     #files = list(glob.glob(f"data/preprocessed/*/*.{CONFIG['EXTENSION']}"))
-    for f in tqdm(files[:30]):
-        #for i in tqdm(range(100)):
-        for i in tqdm(range(10)):
-            while 1:
-                try:
-                    transform_file(f)
-                    break
-                except sox.SoxError:
-                    continue
+    while 1:
+        for f in tqdm(files[:30]):
+            for i in range(1):
+                while 1:
+                    try:
+                        transform_file(f)
+                        break
+                    except sox.SoxError:
+                        continue
