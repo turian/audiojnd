@@ -149,8 +149,8 @@ def transform_file(f):
     slug = f"{os.path.split(f)[1]}-{transform}-{hashlib.sha224(json.dumps(params, sort_keys=True).encode('utf-8')).hexdigest()[:4]}"
     print(slug)
     outf = os.path.join(
-        #"data/transforms",
-        "gold/transforms",
+        "data/transforms",
+        #"gold/transforms",
         #os.path.split(os.path.split(f)[0])[1],
         os.path.split(f)[1],
         f"{slug}.ogg",
@@ -183,4 +183,5 @@ def transform_file(f):
 
 for f in tqdm(list(glob.glob("data/preprocessed/*/*.ogg"))):
 #for f in tqdm(list(glob.glob("gold/preprocessed/*.ogg"))):
-    transform_file(f)
+    for i in range(19):
+        transform_file(f)
