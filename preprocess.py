@@ -25,23 +25,29 @@ files = list(glob.glob("data/orig/FSD50K.dev_audio/*wav")) + list(
 
 CONFIG = json.loads(open("config.json").read())
 
-def ensure_length(x, length_in_samples):
+LENGTH_SAMPLES = [
+    (l, int(round(CONFIG["SAMPLE_RATE"] * l))) for l in CONFIG["AUDIO_LENGTHS"]
+]
+
+def ensure_length(x, length_in_samples, from_start=False):
     if len(x) < length_in_samples:
         npad = length_in_samples - len(x)
-        nstart = random.randint(0, npad)
+        if from_start:
+            nstart = 0
+        else:
+            nstart = random.randint(0, npad)
         x = np.hstack([np.zeros(nstart), x, np.zeros(npad - nstart)])
     elif len(x) > length_in_samples:
         ntrim = len(x) - length_in_samples
-        nstart = random.randint(0, ntrim)
+        if from_start:
+            nstart = 0
+        else:
+            nstart = random.randint(0, ntrim)
         x = x[nstart : nstart + length_in_samples]
     assert len(x) == length_in_samples
     return x
 
-
-LENGTH_SAMPLES = [
-    (l, int(round(CONFIG["SAMPLE_RATE"] * l))) for l in CONFIG["AUDIO_LENGTHS"]
-]
-for f in tqdm(files):
+def preprocess_file(f):
     newf = f.replace("/orig/", "/preprocessed/")
     newd = os.path.split(newf)[0]
     if not os.path.exists(newd):
@@ -54,7 +60,7 @@ for f in tqdm(files):
             done = False
             break
     if done:
-        continue
+        return
 
     x, sr = sf.read(f)
     if len(x.shape) == 2:
@@ -71,7 +77,7 @@ for f in tqdm(files):
     # Otherwise, low volume noise can become high volume!
     if np.max(np.abs(x)) == 0:
         # All silent :\
-        continue
+        return
     x /= np.max(np.abs(x))
 
     for length, samples in LENGTH_SAMPLES:
@@ -93,3 +99,7 @@ for f in tqdm(files):
             else:
                 assert CONFIG['EXTENSION'] == 'wav'
             assert os.path.exists(f"{newf}-%.2f.{CONFIG['EXTENSION']}" % length)
+
+if __name__ == "__main__":
+    for f in tqdm(files):
+        preprocess_file(f)
