@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Preprocess the FSD50K corpus.
+Preprocess the FSD50K corpus to MP3 (best for web.
 
 For each file:
 * Resample to mono, target SR
@@ -50,7 +50,7 @@ for f in tqdm(files):
     # Skip files we have already done
     done = True
     for length, samples in LENGTH_SAMPLES:
-        if not os.path.exists(newf + "-%.2f.ogg" % length):
+        if not os.path.exists(f"{newf}-%.2f.{CONFIG['EXTENSION']}" % length):
             done = False
             break
     if done:
@@ -82,3 +82,11 @@ for f in tqdm(files):
                 break
         if xl is not None:
             sf.write(newf + "-%.2f.wav" % length, xl, CONFIG["SAMPLE_RATE"])
+            if CONFIG['EXTENSION'] == "mp3":
+                # We could normalize here, but probably we don't want to
+                # since it will change the RMS volume
+                # lameenc is cooler but harder to use
+                os.system(f"lame --quiet -V1 {newf}-%.2f.wav" % length)
+            else:
+                assert CONFIG['EXTENSION'] == 'wav'
+            assert os.path.exists(f"{newf}-%.2f.{CONFIG['EXTENSION']}")

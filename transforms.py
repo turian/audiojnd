@@ -13,6 +13,7 @@ from tqdm.auto import tqdm
 
 N_TRANSFORMS = 32
 
+CONFIG = json.loads(open("config.json").read())
 
 def note_to_freq(note):
     a = 440  # frequency of A (common value is 440Hz)
@@ -151,7 +152,7 @@ def transform_file(f):
         #"gold/transforms",
         #os.path.split(os.path.split(f)[0])[1],
         os.path.split(f)[1],
-        f"{slug}.wav",
+        f"{slug}.{CONFIG['EXTENSION']}",
     )
     outjson = os.path.splitext(outf)[0] + ".json"
     outd = os.path.split(outf)[0]
@@ -179,7 +180,6 @@ def transform_file(f):
     print(torch.mean(torch.abs(emb1 - emb2)).item())
     """
 
-for f in tqdm(list(glob.glob("data/preprocessed/*/*.wav"))):
-#for f in tqdm(list(glob.glob("gold/preprocessed/*.wav"))):
+for f in tqdm(list(glob.glob(f"data/preprocessed/*/*.{CONFIG['EXTENSION']}"))):
     for i in range(19):
         transform_file(f)
