@@ -32,14 +32,14 @@ def pydubread(f):
     return y
 
 
-def pydubwrite(f, sr, x, normalized=False):
-    """numpy array to MP3"""
-    assert sr == CONFIG["SAMPLE_RATE"]
-    assert x.ndim== 1
-    y = np.int16(x)
-    song = pydub.AudioSegment(y.tobytes(), frame_rate=sr, sample_width=2, channels=1)
-    assert CONFIG["EXTENSION"] == "mp3"
-    song.export(f, format="mp3", bitrate="320k")
+#def pydubwrite(f, sr, x, normalized=False):
+#    """numpy array to MP3"""
+#    assert sr == CONFIG["SAMPLE_RATE"]
+#    assert x.ndim== 1
+#    y = np.int16(x)
+#    song = pydub.AudioSegment(y.tobytes(), frame_rate=sr, sample_width=2, channels=1)
+#    assert CONFIG["EXTENSION"] == "mp3"
+#    song.export(f, format="mp3", bitrate="320k")
 
 # https://pysox.readthedocs.io/en/latest/api.html
 # The format of each element here is:
@@ -175,7 +175,9 @@ def transform_file(f):
         #"gold/transforms",
         os.path.split(os.path.split(f)[0])[1],
         os.path.split(f)[1],
-        f"{slug}.{CONFIG['EXTENSION']}",
+        #f"{slug}.{CONFIG['EXTENSION']}",
+        # WAV first, then MP3 later
+        f"{slug}.wav"
     )
     outjson = os.path.splitext(outf)[0] + ".json"
     outd = os.path.split(outf)[0]
@@ -192,13 +194,14 @@ def transform_file(f):
         # Try to make the same length as the original WAV
         # MP3 compression might fuck this up slightly
         newx = ensure_length(newx, len(x), from_start=True)
-        pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
+        #pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
+        sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
+        # Use lame so we can control the variable bitrate
+        os.system(f"lame --quiet -V1 {outf}")
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
     open(outjson, "wt").write(json.dumps(
         [{"orig": f}, {transform: params}], indent=4))
-
-    return outf, outjson
 
     """
     # TODO: Different openl3 model?
