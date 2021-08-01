@@ -13,8 +13,6 @@ from tqdm.auto import tqdm
 
 N_TRANSFORMS = 32
 
-random.seed(0)
-
 
 def note_to_freq(note):
     a = 440  # frequency of A (common value is 440Hz)
