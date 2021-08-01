@@ -89,4 +89,4 @@ for f in tqdm(files):
                 os.system(f"lame --quiet -V1 {newf}-%.2f.wav" % length)
             else:
                 assert CONFIG['EXTENSION'] == 'wav'
-            assert os.path.exists(f"{newf}-%.2f.{CONFIG['EXTENSION']}")
+            assert os.path.exists(f"{newf}-%.2f.{CONFIG['EXTENSION']}" % length)
