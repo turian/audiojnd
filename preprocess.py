@@ -82,3 +82,4 @@ for f in tqdm(files):
                 break
         if xl is not None:
             sf.write(newf + "-%.2f.ogg" % length, xl, CONFIG["SAMPLE_RATE"])
+            sf.write(newf + "-%.2f.mp3" % length, xl, CONFIG["SAMPLE_RATE"])
