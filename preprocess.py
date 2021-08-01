@@ -57,9 +57,9 @@ for f in tqdm(files):
         continue
 
     x, sr = sf.read(f)
-    if x.shape == 2:
-        print(f"Skipping {f} {x.shape}...")
-        continue
+    if len(x.shape) == 2:
+        # Convert to mono
+        x = np.mean(x, axis=1)
     # We use 48K since that is OpenL3's SR
     # TODO: Might be faster to use sox+ffmpeg?
     if sr != CONFIG["SAMPLE_RATE"]:
@@ -67,19 +67,18 @@ for f in tqdm(files):
         x = resampy.resample(x, sr, CONFIG["SAMPLE_RATE"])
         sr = CONFIG["SAMPLE_RATE"]
 
+    # Normalize audio to max peak BEFORE trimming.
+    # Otherwise, low volume noise can become high volume!
+    x /= np.max(np.abs(x))
+
     for length, samples in LENGTH_SAMPLES:
         # Try up to 100 times to find a snippet that is not too silent
         for i in range(100):
             xl = ensure_length(x, samples)
-            # Normalize audio to max peak
-            if np.max(np.abs(xl)) == 0:
+            rms = np.mean(librosa.feature.rms(xl))
+            if rms < CONFIG["MIN_RMS"]:
                 xl = None
             else:
-                xl /= np.max(np.abs(xl))
-                rms = np.mean(librosa.feature.rms(xl))
-                if rms < CONFIG["MIN_RMS"]:
-                    xl = None
-                else:
-                    break
+                break
         if xl is not None:
             sf.write(newf + "-%.2f.ogg" % length, xl, CONFIG["SAMPLE_RATE"])
