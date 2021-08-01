@@ -69,6 +69,9 @@ for f in tqdm(files):
 
     # Normalize audio to max peak BEFORE trimming.
     # Otherwise, low volume noise can become high volume!
+    if np.max(np.abs(x)) == 0:
+        # All silent :\
+        continue
     x /= np.max(np.abs(x))
 
     for length, samples in LENGTH_SAMPLES:
