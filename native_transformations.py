@@ -1,4 +1,3 @@
-
 import numpy as np
 
 # From https://github.com/ibab/tensorflow-wavenet/blob/master/test/test_mu_law.py
@@ -24,8 +23,11 @@ def _manual_mu_law_decode(signal, quantization_channels):
     y = signal.astype(np.float32)
 
     y = 2 * (y / mu) - 1
-    x = np.sign(y) * (1.0 / mu) * ((1.0 + mu)**abs(y) - 1.0)
+    x = np.sign(y) * (1.0 / mu) * ((1.0 + mu) ** abs(y) - 1.0)
     return x
 
+
 def mulaw(signal, quantization_channels):
-    return _manual_mu_law_decode(_manual_mu_law_encode(signal, quantization_channels), quantization_channels)
+    return _manual_mu_law_decode(
+        _manual_mu_law_encode(signal, quantization_channels), quantization_channels
+    )

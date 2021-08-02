@@ -29,6 +29,7 @@ LENGTH_SAMPLES = [
     (l, int(round(CONFIG["SAMPLE_RATE"] * l))) for l in CONFIG["AUDIO_LENGTHS"]
 ]
 
+
 def ensure_length(x, length_in_samples, from_start=False):
     if len(x) < length_in_samples:
         npad = length_in_samples - len(x)
@@ -46,6 +47,7 @@ def ensure_length(x, length_in_samples, from_start=False):
         x = x[nstart : nstart + length_in_samples]
     assert len(x) == length_in_samples
     return x
+
 
 def preprocess_file(f):
     newf = f.replace("/orig/", "/preprocessed/")
@@ -91,14 +93,15 @@ def preprocess_file(f):
                 break
         if xl is not None:
             sf.write(newf + "-%.2f.wav" % length, xl, CONFIG["SAMPLE_RATE"])
-            if CONFIG['EXTENSION'] == "mp3":
+            if CONFIG["EXTENSION"] == "mp3":
                 # We could normalize here, but probably we don't want to
                 # since it will change the RMS volume
                 # lameenc is cooler but harder to use
                 os.system(f"lame --quiet -V1 {newf}-%.2f.wav" % length)
             else:
-                assert CONFIG['EXTENSION'] == 'wav'
+                assert CONFIG["EXTENSION"] == "wav"
             assert os.path.exists(f"{newf}-%.2f.{CONFIG['EXTENSION']}" % length)
+
 
 if __name__ == "__main__":
     for f in tqdm(files):
