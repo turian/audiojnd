@@ -49,6 +49,8 @@ def pydubread(f):
 # (transform name, [(continuous parameter, min, max), ...], [(categorical parameter, [values])])
 # TODO: Add other transforms from JND paper?
 transforms = [
+    ("native", "mulaw", [], [("quantization_channels", range(2, 256+1))]),
+"""
     ("sox", "allpass", [("midi", 0, 127), ("width_q", 0.01, 5)], []),
     (
         "sox", "bandpass",
@@ -144,7 +146,36 @@ transforms = [
     ),
     ("sox", "treble", [("gain_db", -20, 20), ("midi", 0, 127), ("slope", 0.3, 1.0)], []),
     ("sox", "tremolo", [("speed", 0.1, 10.0), ("depth", 0, 100)], []),
+"""
 ]
+
+# From https://github.com/ibab/tensorflow-wavenet/blob/master/test/test_mu_law.py
+
+
+# A set of mu law encode/decode functions implemented
+# in numpy
+def manual_mu_law_encode(signal, quantization_channels):
+    # Manual mu-law companding and mu-bits quantization
+    mu = quantization_channels - 1
+
+    magnitude = np.log1p(mu * np.abs(signal)) / np.log1p(mu)
+    signal = np.sign(signal) * magnitude
+
+    # Map signal from [-1, +1] to [0, mu-1]
+    signal = (signal + 1) / 2 * mu + 0.5
+    quantized_signal = signal.astype(np.int32)
+
+    return quantized_signal
+
+
+def manual_mu_law_decode(signal, quantization_channels):
+    # Calculate inverse mu-law companding and dequantization
+    mu = quantization_channels - 1
+    y = signal.astype(np.float32)
+
+    y = 2 * (y / mu) - 1
+    x = np.sign(y) * (1.0 / mu) * ((1.0 + mu)**abs(y) - 1.0)
+    return x
 
 
 def choose_value(name, low, hi):
@@ -162,7 +193,7 @@ def transform_file(f):
     transform_spec = random.choice(transforms)
     transform = "%s-%s" % (transform_spec[0], transform_spec[1])
     params = {}
-    #print(transform_spec)
+    print(transform_spec)
     for param, low, hi in transform_spec[2]:
         param, v = choose_value(param, low, hi)
         params[param] = v
@@ -197,19 +228,22 @@ def transform_file(f):
         # Try to make the same length as the original WAV
         #tfm.trim(0, len(x) / CONFIG["SAMPLE_RATE"])
         newx = tfm.build_array(input_array=x, sample_rate_in=CONFIG["SAMPLE_RATE"])
-        # Try to make the same length as the original WAV
-        # MP3 compression might fuck this up slightly
-        newx = ensure_length(newx, len(x), from_start=True)
-
-        ## Now do a wet/dry mix
-        #newx = newx * wet + x * (1 - wet)
-
-        #pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
-        sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
-        # Use lame so we can control the variable bitrate
-        os.system(f"lame --quiet -V1 {outf}")
+    elif transform_spec[0] == "native" and transform_spec[1] == "mulaw":
+        newx = manual_mu_law_decode(manual_mu_law_encode(x, **params), **params)
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
+
+    # Try to make the same length as the original WAV
+    # MP3 compression might fuck this up slightly
+    newx = ensure_length(newx, len(x), from_start=True)
+
+    ## Now do a wet/dry mix
+    #newx = newx * wet + x * (1 - wet)
+
+    #pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
+    sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
+    # Use lame so we can control the variable bitrate
+    os.system(f"lame --quiet -V1 {outf}")
     #assert "wet" not in params
     #params["wet"] = wet
     open(outjson, "wt").write(json.dumps(
