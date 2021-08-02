@@ -4,9 +4,9 @@ Audio pair JND
 
 Installation:
 ```
-pip3 install -U tqdm
+pip3 install -U tqdm sox
 # lameenc is cooler but harder to use
-sudo apt-get install -y lame libsox-fmt-mp3 sox
+sudo apt-get install -y lame libsox-fmt-all sox ffmpeg
 ```
 
 Usage:
