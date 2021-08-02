@@ -16,6 +16,7 @@ from tqdm.auto import tqdm
 from preprocess import ensure_length
 import native_transformations
 
+import audiomentations
 CONFIG = json.loads(open("config.json").read())
 
 def note_to_freq(note):
@@ -146,6 +147,16 @@ transforms = [
     ),
     ("sox", "treble", [("gain_db", -20, 20), ("midi", 0, 127), ("slope", 0.3, 1.0)], []),
     ("sox", "tremolo", [("speed", 0.1, 10.0), ("depth", 0, 100)], []),
+    ("audiomentations", "AddGaussianNoise", [], []),
+    ("audiomentations", "AddBackgroundNoise", [], [("sounds_path", ["folder_name"])]),
+    ("audiomentations", "AddShortNoises", [], [("sounds_path", ["folder_name"])]),
+    ("audiomentations", "ApplyImpulseResponse", [], [("ir_path", ["folder_name"])]),
+    ("audiomentations", "Clip", [], []),
+    ("audiomentations", "Mp3Compression", [], []),
+    ("audiomentations", "Reverse", [], []),
+    ("audiomentations", "TanhDistortion", [], []),
+    ("audiomentations", "SpecChannelShuffle", [], []),
+    ("audiomentations", "Resample", [], []),
 ]
 
 
@@ -201,6 +212,9 @@ def transform_file(f):
         newx = tfm.build_array(input_array=x, sample_rate_in=CONFIG["SAMPLE_RATE"])
     elif transform_spec[0] == "native":
         newx = native_transformations.__getattribute__(transform_spec[1])(x, **params)
+    elif transform_spec[0] == "audiomentations":
+        tfm = audiomentations.__getattribute__(transform_spec[1])(p = 1.0,**params)
+        newx = tfm(x, CONFIG["SAMPLE_RATE"])
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
 
