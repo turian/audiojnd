@@ -7,11 +7,14 @@ import json
 import os.path
 import random
 
+import numpy as np
+import pydub
 import soundfile as sf
 import sox
 from tqdm.auto import tqdm
 
-N_TRANSFORMS = 32
+from preprocess import ensure_length
+import native_transformations
 
 CONFIG = json.loads(open("config.json").read())
 
@@ -19,12 +22,35 @@ def note_to_freq(note):
     a = 440  # frequency of A (common value is 440Hz)
     return (a / 32) * (2 ** ((note - 9) / 12))
 
+def pydubread(f):
+    """
+    MP3 to numpy array.
+    We use pydub since soundfile can't read mp3s.
+    """
+    a = pydub.AudioSegment.from_mp3(f)
+    y = np.array(a.get_array_of_samples(), dtype=np.float32)
+    # Convert to float32 from int16
+    y /= -32768
+    assert a.frame_rate == CONFIG["SAMPLE_RATE"]
+    return y
+
+
+#def pydubwrite(f, sr, x, normalized=False):
+#    """numpy array to MP3"""
+#    assert sr == CONFIG["SAMPLE_RATE"]
+#    assert x.ndim== 1
+#    assert False, "Need to convert from -1, 1 to -32768, 32768"
+#    y = np.int16(x)
+#    song = pydub.AudioSegment(y.tobytes(), frame_rate=sr, sample_width=2, channels=1)
+#    assert CONFIG["EXTENSION"] == "mp3"
+#    song.export(f, format="mp3", bitrate="320k")
 
 # https://pysox.readthedocs.io/en/latest/api.html
 # The format of each element here is:
 # (transform name, [(continuous parameter, min, max), ...], [(categorical parameter, [values])])
 # TODO: Add other transforms from JND paper?
 transforms = [
+    ("native", "mulaw", [], [("quantization_channels", range(2, 256+1))]),
     ("sox", "allpass", [("midi", 0, 127), ("width_q", 0.01, 5)], []),
     (
         "sox", "bandpass",
@@ -123,6 +149,7 @@ transforms = [
 ]
 
 
+
 def choose_value(name, low, hi):
     v = random.uniform(low, hi)
     if name == "midi":
@@ -131,28 +158,35 @@ def choose_value(name, low, hi):
     else:
         return (name, v)
 
-
 def transform_file(f):
+    x = pydubread(f)
+
     transform_spec = random.choice(transforms)
     transform = "%s-%s" % (transform_spec[0], transform_spec[1])
     params = {}
-    print(transform_spec)
+    #print(transform_spec)
     for param, low, hi in transform_spec[2]:
         param, v = choose_value(param, low, hi)
         params[param] = v
     for param, vals in transform_spec[3]:
         params[param] = random.choice(vals)
 
+    ## Choose a wet/dry ratio between transform and original
+    #wet = random.random()
+    #wet = 1
+
     #outfiles = []
     # TODO: Save JSON of all transforms
     slug = f"{os.path.split(f)[1]}-{transform}-{hashlib.sha224(json.dumps(params, sort_keys=True).encode('utf-8')).hexdigest()[:4]}"
-    print(slug)
+    #print(slug)
     outf = os.path.join(
         "data/transforms",
         #"gold/transforms",
-        #os.path.split(os.path.split(f)[0])[1],
+        os.path.split(os.path.split(f)[0])[1],
         os.path.split(f)[1],
-        f"{slug}.{CONFIG['EXTENSION']}",
+        #f"{slug}.{CONFIG['EXTENSION']}",
+        # WAV first, then MP3 later
+        f"{slug}.wav"
     )
     outjson = os.path.splitext(outf)[0] + ".json"
     outd = os.path.split(outf)[0]
@@ -162,9 +196,27 @@ def transform_file(f):
     if transform_spec[0] == "sox":
         tfm = sox.Transformer()
         tfm.__getattribute__(transform_spec[1])(**params)
-        tfm.build_file(f, outf)
+        # Try to make the same length as the original WAV
+        #tfm.trim(0, len(x) / CONFIG["SAMPLE_RATE"])
+        newx = tfm.build_array(input_array=x, sample_rate_in=CONFIG["SAMPLE_RATE"])
+    elif transform_spec[0] == "native":
+        newx = native_transformations.__getattribute__(transform_spec[1])(x, **params)
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
+
+    # Try to make the same length as the original WAV
+    # MP3 compression might fuck this up slightly
+    newx = ensure_length(newx, len(x), from_start=True)
+
+    ## Now do a wet/dry mix
+    #newx = newx * wet + x * (1 - wet)
+
+    #pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
+    sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
+    # Use lame so we can control the variable bitrate
+    os.system(f"lame --quiet -V1 {outf}")
+    #assert "wet" not in params
+    #params["wet"] = wet
     open(outjson, "wt").write(json.dumps(
         [{"orig": f}, {transform: params}], indent=4))
 
@@ -180,6 +232,20 @@ def transform_file(f):
     print(torch.mean(torch.abs(emb1 - emb2)).item())
     """
 
-for f in tqdm(list(glob.glob(f"data/preprocessed/*/*.{CONFIG['EXTENSION']}"))):
-    for i in range(19):
-        transform_file(f)
+if __name__ == "__main__":
+    files = list(glob.glob(f"data/preprocessed/FSD50K.dev_audio/*.{CONFIG['EXTENSION']}"))
+    # Always shuffle the files deterministically (seed 0),
+    # even if we use non-deterministic transforms of the audio.
+    rng = random.Random(0)
+    rng.shuffle(files)
+    #files = list(glob.glob(f"data/preprocessed/*/*.{CONFIG['EXTENSION']}"))
+    while 1:
+        #for f in tqdm(files[:30]):
+        for f in tqdm(files):
+            for i in range(1):
+                while 1:
+                    try:
+                        transform_file(f)
+                        break
+                    except sox.SoxError:
+                        continue
