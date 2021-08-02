@@ -235,7 +235,8 @@ if __name__ == "__main__":
     rng.shuffle(files)
     #files = list(glob.glob(f"data/preprocessed/*/*.{CONFIG['EXTENSION']}"))
     while 1:
-        for f in tqdm(files[:30]):
+        #for f in tqdm(files[:30]):
+        for f in tqdm(files):
             for i in range(1):
                 while 1:
                     try:
