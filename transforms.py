@@ -14,6 +14,7 @@ import sox
 from tqdm.auto import tqdm
 
 from preprocess import ensure_length
+import native_transformations
 
 CONFIG = json.loads(open("config.json").read())
 
@@ -50,7 +51,6 @@ def pydubread(f):
 # TODO: Add other transforms from JND paper?
 transforms = [
     ("native", "mulaw", [], [("quantization_channels", range(2, 256+1))]),
-"""
     ("sox", "allpass", [("midi", 0, 127), ("width_q", 0.01, 5)], []),
     (
         "sox", "bandpass",
@@ -146,36 +146,8 @@ transforms = [
     ),
     ("sox", "treble", [("gain_db", -20, 20), ("midi", 0, 127), ("slope", 0.3, 1.0)], []),
     ("sox", "tremolo", [("speed", 0.1, 10.0), ("depth", 0, 100)], []),
-"""
 ]
 
-# From https://github.com/ibab/tensorflow-wavenet/blob/master/test/test_mu_law.py
-
-
-# A set of mu law encode/decode functions implemented
-# in numpy
-def manual_mu_law_encode(signal, quantization_channels):
-    # Manual mu-law companding and mu-bits quantization
-    mu = quantization_channels - 1
-
-    magnitude = np.log1p(mu * np.abs(signal)) / np.log1p(mu)
-    signal = np.sign(signal) * magnitude
-
-    # Map signal from [-1, +1] to [0, mu-1]
-    signal = (signal + 1) / 2 * mu + 0.5
-    quantized_signal = signal.astype(np.int32)
-
-    return quantized_signal
-
-
-def manual_mu_law_decode(signal, quantization_channels):
-    # Calculate inverse mu-law companding and dequantization
-    mu = quantization_channels - 1
-    y = signal.astype(np.float32)
-
-    y = 2 * (y / mu) - 1
-    x = np.sign(y) * (1.0 / mu) * ((1.0 + mu)**abs(y) - 1.0)
-    return x
 
 
 def choose_value(name, low, hi):
@@ -186,14 +158,13 @@ def choose_value(name, low, hi):
     else:
         return (name, v)
 
-
 def transform_file(f):
     x = pydubread(f)
 
     transform_spec = random.choice(transforms)
     transform = "%s-%s" % (transform_spec[0], transform_spec[1])
     params = {}
-    print(transform_spec)
+    #print(transform_spec)
     for param, low, hi in transform_spec[2]:
         param, v = choose_value(param, low, hi)
         params[param] = v
@@ -228,8 +199,8 @@ def transform_file(f):
         # Try to make the same length as the original WAV
         #tfm.trim(0, len(x) / CONFIG["SAMPLE_RATE"])
         newx = tfm.build_array(input_array=x, sample_rate_in=CONFIG["SAMPLE_RATE"])
-    elif transform_spec[0] == "native" and transform_spec[1] == "mulaw":
-        newx = manual_mu_law_decode(manual_mu_law_encode(x, **params), **params)
+    elif transform_spec[0] == "native":
+        newx = native_transformations.__getattribute__(transform_spec[1])(x, **params)
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
 
