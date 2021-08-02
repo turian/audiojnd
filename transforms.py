@@ -14,6 +14,7 @@ import sox
 from tqdm.auto import tqdm
 
 from preprocess import ensure_length
+import native_transformations
 
 CONFIG = json.loads(open("config.json").read())
 
@@ -49,6 +50,7 @@ def pydubread(f):
 # (transform name, [(continuous parameter, min, max), ...], [(categorical parameter, [values])])
 # TODO: Add other transforms from JND paper?
 transforms = [
+    ("native", "mulaw", [], [("quantization_channels", range(2, 256+1))]),
     ("sox", "allpass", [("midi", 0, 127), ("width_q", 0.01, 5)], []),
     (
         "sox", "bandpass",
@@ -147,6 +149,7 @@ transforms = [
 ]
 
 
+
 def choose_value(name, low, hi):
     v = random.uniform(low, hi)
     if name == "midi":
@@ -154,7 +157,6 @@ def choose_value(name, low, hi):
         return ("frequency", note_to_freq(v))
     else:
         return (name, v)
-
 
 def transform_file(f):
     x = pydubread(f)
@@ -197,19 +199,22 @@ def transform_file(f):
         # Try to make the same length as the original WAV
         #tfm.trim(0, len(x) / CONFIG["SAMPLE_RATE"])
         newx = tfm.build_array(input_array=x, sample_rate_in=CONFIG["SAMPLE_RATE"])
-        # Try to make the same length as the original WAV
-        # MP3 compression might fuck this up slightly
-        newx = ensure_length(newx, len(x), from_start=True)
-
-        ## Now do a wet/dry mix
-        #newx = newx * wet + x * (1 - wet)
-
-        #pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
-        sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
-        # Use lame so we can control the variable bitrate
-        os.system(f"lame --quiet -V1 {outf}")
+    elif transform_spec[0] == "native":
+        newx = native_transformations.__getattribute__(transform_spec[1])(x, **params)
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
+
+    # Try to make the same length as the original WAV
+    # MP3 compression might fuck this up slightly
+    newx = ensure_length(newx, len(x), from_start=True)
+
+    ## Now do a wet/dry mix
+    #newx = newx * wet + x * (1 - wet)
+
+    #pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
+    sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
+    # Use lame so we can control the variable bitrate
+    os.system(f"lame --quiet -V1 {outf}")
     #assert "wet" not in params
     #params["wet"] = wet
     open(outjson, "wt").write(json.dumps(
