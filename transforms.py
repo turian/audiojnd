@@ -179,7 +179,7 @@ transforms = [
         "audiomentations",
         "AddGaussianNoise",
         [],
-        [("min_amplitude", [0.00001]), ("max_amplitude", [0.2])],
+        [("min_amplitude", [0.00001]), ("max_amplitude", [0.25])],
     ),
     (
         "audiomentations",
@@ -194,10 +194,10 @@ transforms = [
     (
         "audiomentations",
         "AddShortNoises",
-        [("burst_probability", 0.1, 0.8)],
+        [("burst_probability", 0.01, 0.85)],
         [
             ("sounds_path", ["data/backgroundnoise/FSDKaggle2018.audio_test"]),
-            ("min_snr_in_db", [0.001]),
+            ("min_snr_in_db", [0.0001]),
             ("max_snr_in_db", [100]),
             ("min_time_between_sounds", [0]),
             ("max_time_between_sounds", [10]),
@@ -211,10 +211,7 @@ transforms = [
         "audiomentations",
         "Mp3Compression",
         [],
-        [
-            ("min_bitrate", [8, 16, 24, 32, 48, 40, 56]),
-            ("min_bitrate", [64, 128, 256, 224, 320]),
-        ],
+        [("min_bitrate", [16]), ("max_bitrate", [320]),],
     ),
     ("audiomentations", "Reverse", [], []),
     (
@@ -288,6 +285,7 @@ def transform_file(f):
     elif transform_spec[0] == "audiomentations":
         tfm = audiomentations.__getattribute__(transform_spec[1])(p=1.0, **params)
         newx = tfm(x, CONFIG["SAMPLE_RATE"])
+        params = tfm.parameters
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
 
