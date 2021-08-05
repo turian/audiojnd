@@ -284,7 +284,8 @@ def transform_file(f):
     # Choose a wet/dry ratio between transform and original
     # This is only really necessary for ApplyImpulseResponse
     # and SpecChannelShuffle, but is generally useful and not
-    # harmful.
+    # harmful. Just means we are less likely to have drastic obvious
+    # transforms.
     wet = random.random()
 
     # outfiles = []
