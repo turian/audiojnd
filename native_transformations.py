@@ -1,5 +1,6 @@
 import numpy as np
 
+
 # From https://github.com/ibab/tensorflow-wavenet/blob/master/test/test_mu_law.py
 # A set of mu law encode/decode functions implemented
 # in numpy

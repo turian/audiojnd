@@ -13,8 +13,8 @@ import soundfile as sf
 import sox
 from tqdm.auto import tqdm
 
-from preprocess import ensure_length
 import native_transformations
+from preprocess import ensure_length
 
 import audiomentations
 
@@ -321,10 +321,13 @@ if __name__ == "__main__":
     files = list(
         glob.glob(f"data/preprocessed/FSD50K.dev_audio/*.{CONFIG['EXTENSION']}")
     )
+    """
     # Always shuffle the files deterministically (seed 0),
     # even if we use non-deterministic transforms of the audio.
     rng = random.Random(0)
     rng.shuffle(files)
+    """
+    random.shuffle(files)
     # files = list(glob.glob(f"data/preprocessed/*/*.{CONFIG['EXTENSION']}"))
     while 1:
         # for f in tqdm(files[:30]):
