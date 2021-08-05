@@ -232,6 +232,7 @@ transforms = [
     #    [
     #        ("min_bitrate", [32]),
     #        ("max_bitrate", [320]),
+    #        ("backend", ["pydub"]),
     #    ],
     #),
     ("audiomentations", "Reverse", [], []),
@@ -250,16 +251,6 @@ transforms = [
         "Resample",
         [],
         [("min_sample_rate", [4000]), ("max_sample_rate", [CONFIG["SAMPLE_RATE"] - 1])],
-    ),
-    (
-        "audiomentations",
-        "Mp3Compression",
-        [],
-        [
-            ("min_bitrate", [32]),
-            ("max_bitrate", [320]),
-            ("backend", ["pydub"]),
-        ],
     ),
 ]
 
