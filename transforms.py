@@ -187,7 +187,7 @@ transforms = [
         "AddBackgroundNoise",
         [],
         [
-            ("sounds_path", ["data/esc-50/ESC-50-master/audio/"]),
+            ("sounds_path", ["data/orig/FSD50K.dev_audio"]),
             ("min_snr_in_db", [0.001]),
             ("max_snr_in_db", [100]),
         ],
@@ -197,7 +197,7 @@ transforms = [
         "AddShortNoises",
         [("burst_probability", 0.01, 0.85)],
         [
-            ("sounds_path", ["data/esc-50/ESC-50-master/audio/"]),
+            ("sounds_path", ["data/orig/FSD50K.dev_audio"]),
             ("min_snr_in_db", [0.0001]),
             ("max_snr_in_db", [100]),
             ("min_time_between_sounds", [0]),
