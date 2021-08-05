@@ -6,8 +6,18 @@ Installation:
 ```
 # lameenc is cooler but harder to use
 sudo apt-get install -y lame libsox-fmt-all sox ffmpeg python3-pip
-pip3 install -U tqdm sox click pydub
+pip3 install -U tqdm sox click pydub audiomentations
 pip3 install git+https://github.com/turian/torchopenl3.git
+```
+
+Download background noise and impulse response:
+```
+#[could also have colored noise]
+wget https://github.com/karoldvl/ESC-50/archive/master.zip
+mkdir -p data/esc-50/ && pushd data/esc-50/ && unzip ../../master.zip && rm ../../master.zip && popd
+# Could also get echothief: http://www.echothief.com/
+wget https://mcdermottlab.mit.edu/Reverb/IRMAudio/Audio.zip
+mkdir -p data/MIT-McDermott-ImpulseResponse/ && pushd data/MIT-McDermott-ImpulseResponse/ && unzip ../../Audio.zip && rm ../../Audio.zip && popd
 ```
 
 You might need LLVM:
@@ -26,6 +36,7 @@ LLVM_CONFIG=/usr/bin/llvm-config-10 CXXFLAGS=-fPIC pip3 install llvmlite
 Usage:
 ```
 ./get_fsd50.py
+./get_backgroundnoise.py
 ./preprocess.py
 ./transforms.py
 ```

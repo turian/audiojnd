@@ -7,6 +7,7 @@ import json
 import os.path
 import random
 
+import librosa
 import numpy as np
 import pydub
 import soundfile as sf
@@ -15,6 +16,8 @@ from tqdm.auto import tqdm
 
 import native_transformations
 from preprocess import ensure_length
+
+import audiomentations
 
 CONFIG = json.loads(open("config.json").read())
 
@@ -172,6 +175,92 @@ transforms = [
         [],
     ),
     ("sox", "tremolo", [("speed", 0.1, 10.0), ("depth", 0, 100)], []),
+    # Audiomentations Transforms
+    (
+        "audiomentations",
+        "AddGaussianNoise",
+        [],
+        [("min_amplitude", [0.00001]), ("max_amplitude", [0.25])],
+    ),
+    (
+        "audiomentations",
+        "AddBackgroundNoise",
+        [],
+        [
+            ("sounds_path", ["data/esc-50/ESC-50-master/audio/"]),
+            ("min_snr_in_db", [0.001]),
+            ("max_snr_in_db", [100]),
+        ],
+    ),
+    (
+        "audiomentations",
+        "AddShortNoises",
+        [("burst_probability", 0.01, 0.85)],
+        [
+            ("sounds_path", ["data/esc-50/ESC-50-master/audio/"]),
+            ("min_snr_in_db", [0.0001]),
+            ("max_snr_in_db", [100]),
+            ("min_time_between_sounds", [0]),
+            ("max_time_between_sounds", [3]),
+            ("min_pause_factor_during_burst", [0.0]),
+            ("min_pause_factor_during_burst", [1.0]),
+        ],
+    ),
+    (
+        "audiomentations",
+        "ApplyImpulseResponse",
+        [],
+        [
+            ("ir_path", ["data/MIT-McDermott-ImpulseResponse/Audio/"]),
+            ("leave_length_unchanged", [True]),
+        ],
+    ),
+    (
+        "audiomentations",
+        "Clip",
+        [
+            ("a_min", -1.0, 0.0),
+            ("a_max", 0.0, 1.0),
+        ],
+        [],
+    ),
+    # Not really obvious enough
+    #(
+    #    "audiomentations",
+    #    "Mp3Compression",
+    #    [],
+    #    [
+    #        ("min_bitrate", [32]),
+    #        ("max_bitrate", [320]),
+    #    ],
+    #),
+    ("audiomentations", "Reverse", [], []),
+    # Not yet in pypi
+    # (
+    #    "audiomentations",
+    #    "TanhDistortion",
+    #    [],
+    #    [("min_distortion_gain", [0.01]), ("max_distortion_gain", [5.0])],
+    # ),
+    # Has a different __call__ structure
+    # ("audiomentations", "SpecChannelShuffle", [], []),
+    # ("audiomentations", "SpecChannelMask", [], []),
+    (
+        "audiomentations",
+        "Resample",
+        [],
+        [("min_sample_rate", [4000]), ("max_sample_rate", [CONFIG["SAMPLE_RATE"] - 1])],
+    ),
+    (
+        "audiomentations",
+        "Mp3Compression",
+        [],
+        [
+            ("min_bitrate", [32]),
+            ("max_bitrate", [320]),
+            ("backend", ["pydub"]),
+        ],
+    ),
 ]
 
 
@@ -189,17 +278,23 @@ def transform_file(f):
 
     transform_spec = random.choice(transforms)
     transform = "%s-%s" % (transform_spec[0], transform_spec[1])
+
+    #if transform_spec[0] != "audiomentations":
+    #    return
+
     params = {}
-    # print(transform_spec)
+    #print(transform_spec)
     for param, low, hi in transform_spec[2]:
         param, v = choose_value(param, low, hi)
         params[param] = v
     for param, vals in transform_spec[3]:
         params[param] = random.choice(vals)
 
-    ## Choose a wet/dry ratio between transform and original
-    # wet = random.random()
-    # wet = 1
+    # Choose a wet/dry ratio between transform and original
+    # This is only really necessary for ApplyImpulseResponse
+    # and SpecChannelShuffle, but is generally useful and not
+    # harmful.
+    wet = random.random()
 
     # outfiles = []
     # TODO: Save JSON of all transforms
@@ -227,6 +322,16 @@ def transform_file(f):
         newx = tfm.build_array(input_array=x, sample_rate_in=CONFIG["SAMPLE_RATE"])
     elif transform_spec[0] == "native":
         newx = native_transformations.__getattribute__(transform_spec[1])(x, **params)
+    elif transform_spec[0] == "audiomentations":
+        tfm = audiomentations.__getattribute__(transform_spec[1])(p=1.0, **params)
+        newx = tfm(x, CONFIG["SAMPLE_RATE"])
+        if transform_spec[1] == "Resample":
+            newx = librosa.core.resample(
+            newx,
+            orig_sr=tfm.parameters["target_sample_rate"],
+            target_sr=CONFIG["SAMPLE_RATE"]
+            )
+        params = tfm.parameters
     else:
         assert False, f"Unknown transformer {transform_spec[0]}"
 
@@ -234,15 +339,15 @@ def transform_file(f):
     # MP3 compression might fuck this up slightly
     newx = ensure_length(newx, len(x), from_start=True)
 
-    ## Now do a wet/dry mix
-    # newx = newx * wet + x * (1 - wet)
+    # Now do a wet/dry mix
+    newx = newx * wet + x * (1 - wet)
 
     # pydubwrite(outf, CONFIG["SAMPLE_RATE"], newx)
     sf.write(outf, newx, CONFIG["SAMPLE_RATE"])
     # Use lame so we can control the variable bitrate
     os.system(f"lame --quiet -V1 {outf}")
-    # assert "wet" not in params
-    # params["wet"] = wet
+    assert "wet" not in params
+    params["wet"] = wet
     open(outjson, "wt").write(json.dumps([{"orig": f}, {transform: params}], indent=4))
 
     """
