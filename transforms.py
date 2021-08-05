@@ -200,32 +200,54 @@ transforms = [
             ("min_snr_in_db", [0.0001]),
             ("max_snr_in_db", [100]),
             ("min_time_between_sounds", [0]),
-            ("max_time_between_sounds", [10]),
+            ("max_time_between_sounds", [3]),
             ("min_pause_factor_during_burst", [0.01]),
             ("min_pause_factor_during_burst", [1.5]),
         ],
     ),
-    ("audiomentations", "ApplyImpulseResponse", [], []),
-    ("audiomentations", "Clip", [], []),
+    ("audiomentations", "ApplyImpulseResponse", [], ["leave_length_unchanged", [True]]),
+    (
+        "audiomentations",
+        "Clip",
+        [
+            ("a_min", [-1.0, 0.0]),
+            ("a_max", [0.0, 1.0]),
+        ],
+        [],
+    ),
     (
         "audiomentations",
         "Mp3Compression",
         [],
-        [("min_bitrate", [16]), ("max_bitrate", [320]),],
+        [
+            ("min_bitrate", [16]),
+            ("max_bitrate", [320]),
+        ],
     ),
     ("audiomentations", "Reverse", [], []),
-    (
-        "audiomentations",
-        "TanhDistortion",
-        [],
-        [("min_distortion_gain", [0.01]), ("max_distortion_gain", [5.0])],
-    ),
+    # Not yet in pypi
+    # (
+    #    "audiomentations",
+    #    "TanhDistortion",
+    #    [],
+    #    [("min_distortion_gain", [0.01]), ("max_distortion_gain", [5.0])],
+    # ),
     ("audiomentations", "SpecChannelShuffle", [], []),
     (
         "audiomentations",
         "Resample",
         [],
-        [("min_sample_rate", [8000]), ("min_sample_rate", [64000])],
+        [("min_sample_rate", [8000]), ("min_sample_rate", [48000])],
+    ),
+    (
+        "audiomentations",
+        "Mp3Compression",
+        [],
+        [
+            ("min_bitrate", [32]),
+            ("max_bitrate", [320]),
+            ("backend", ["pydub"]),
+        ],
     ),
 ]
 
@@ -244,6 +266,10 @@ def transform_file(f):
 
     transform_spec = random.choice(transforms)
     transform = "%s-%s" % (transform_spec[0], transform_spec[1])
+
+    if transform_spec[0] != "audiomentations":
+        continue
+
     params = {}
     # print(transform_spec)
     for param, low, hi in transform_spec[2]:
