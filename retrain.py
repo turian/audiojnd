@@ -79,12 +79,13 @@ class AnnotationsDataModule(pl.LightningDataModule):
         for csvfile in glob.glob(os.path.join(self.data_dir, "*/annotation*csv")):
             print(csvfile)
             for infile, transfile, y in csv.reader(open(csvfile)):
-                y = int(y)
+                y = float(y)
                 if infile == transfile:
                     continue
                 # Only use dev, not eval
                 if "FSD50K.eval_audio" in infile:
                     continue
+                # TODO: Remove any duplicates within the same file!!!
                 self.rows.append((infile, transfile, y))
         print(len(self.rows))
         self.dataset = PairedDatset(self.rows)
@@ -155,10 +156,12 @@ class AudioJNDModel(pl.LightningModule):
         # training_step defined the train loop.
         # It is independent of forward
         x1, x2, y = batch
+        y = y.float()
         y_hat = self.forward(x1, x2)
         # Could also try cosine embedding loss and bceloss and just
         # simple l1 loss
         loss = F.mse_loss(y_hat, y)
+        print(y_hat, y, loss)
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
         return loss
