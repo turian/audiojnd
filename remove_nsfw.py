@@ -3,11 +3,30 @@
 Remove audio that has NSFW tags.
 """
 
-import json
 import glob
+import json
 import os
 
-NSFW = frozenset(["cursing", "curse", "swearing", "swear", "fuck", "fucking", "shit", "cunt", "cock", "ass", "arse", "sex", "cumming", "sexy", "moan", "masturbating"])
+NSFW = frozenset(
+    [
+        "cursing",
+        "curse",
+        "swearing",
+        "swear",
+        "fuck",
+        "fucking",
+        "shit",
+        "cunt",
+        "cock",
+        "ass",
+        "arse",
+        "sex",
+        "cumming",
+        "sexy",
+        "moan",
+        "masturbating",
+    ]
+)
 
 ids = set()
 for f in glob.glob("data/orig/FSD50K.metadata/*clips_info_FSD50K.json"):
