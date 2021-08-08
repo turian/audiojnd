@@ -12,6 +12,7 @@ If your terminal gets corrupted after exit, simply type 'reset'.
 # Change this to the name of your command-line audio player
 AUDIO_PLAYER = "mpv"
 
+import copy
 import csv
 import curses
 import glob
@@ -22,14 +23,22 @@ import time
 
 import click
 
+# Since the initial annotation has a lot of different ones,
+# inject this % duplicates as a control
+CONTROL_PERCENT = 0.4
 
-def choose_pair(pairs):
+
+def choose_pair(pairs, orig_pairs):
     if len(pairs) == 0:
         print("Done with all annotations.")
         sys.exit(0)
 
-    oldf, newf = pairs[0]
-    pairs = pairs[1:]
+    if random.random() < CONTROL_PERCENT:
+        oldf, _ = random.choice(orig_pairs)
+        newf = oldf
+    else:
+        oldf, newf = pairs[0]
+        pairs = pairs[1:]
 
     if random.random() < 0.5:
         a, b = oldf, newf
@@ -44,17 +53,19 @@ def write_rows(goldcsv, goldrows):
         csvout.writerow(row)
 
 
-def check_input(pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name):
+def check_input(
+    pairs, orig_pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name
+):
     c = stdscr.getch()
     if c == ord("a"):
         goldrows.append([oldf, newf, 0])
         write_rows(goldcsv, goldrows)
-        oldf, newf, a, b, pairs = choose_pair(pairs)
+        oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs)
     elif c == ord("l"):
         if oldf != newf:
             goldrows.append([oldf, newf, 1])
             write_rows(goldcsv, goldrows)
-        oldf, newf, a, b, pairs = choose_pair(pairs)
+        oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs)
     elif c == ord("q"):
         return None, None, None, None, None
     return oldf, newf, a, b, pairs
@@ -72,6 +83,7 @@ def annotate(model_name):
     pairs = []
     for oldf, newf in csv.reader(open(f"data/iterations/{model_name}/to_label.csv")):
         pairs.append((oldf, newf))
+    orig_pairs = copy.copy(pairs)
 
     # https://stackoverflow.com/a/42444516/82733
     stdscr = curses.initscr()
@@ -80,26 +92,53 @@ def annotate(model_name):
 
     stdscr.addstr(0, 0, "a = no difference, l = difference, q = quit")
     line = 1
-    oldf, newf, a, b, pairs = choose_pair(pairs)
+    oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs)
     try:
         while 1:
             print("Play A")
             os.system(f"{AUDIO_PLAYER} {a} > /dev/null 2>&1")
             oldf, newf, a, b, pairs = check_input(
-                pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name
+                pairs,
+                orig_pairs,
+                stdscr,
+                oldf,
+                newf,
+                a,
+                b,
+                goldcsv,
+                goldrows,
+                model_name,
             )
             if oldf == None:
                 break
             time.sleep(0.25)
             oldf, newf, a, b, pairs = check_input(
-                pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name
+                pairs,
+                orig_pairs,
+                stdscr,
+                oldf,
+                newf,
+                a,
+                b,
+                goldcsv,
+                goldrows,
+                model_name,
             )
             if oldf == None:
                 break
             print("Play B")
             os.system(f"{AUDIO_PLAYER} {b} > /dev/null 2>&1")
             oldf, newf, a, b, pairs = check_input(
-                pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name
+                pairs,
+                orig_pairs,
+                stdscr,
+                oldf,
+                newf,
+                a,
+                b,
+                goldcsv,
+                goldrows,
+                model_name,
             )
             if oldf == None:
                 break
