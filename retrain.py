@@ -11,6 +11,7 @@ import re
 from typing import Optional
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -25,8 +26,6 @@ from sklearn.metrics import roc_auc_score
 
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
-
-
 
 
 class PairedDatset(Dataset):
@@ -53,12 +52,12 @@ class PairedDatset(Dataset):
         assert oldx.shape == newx.shape, f"{oldx.shape} != {newx.shape}"
         assert oldx.shape == (nsamples,)
 
-        oldX = preprocess_audio_batch(torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
-            torch.float32
-        )
-        newX = preprocess_audio_batch(torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
-            torch.float32
-        )
+        oldX = preprocess_audio_batch(
+            torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]
+        ).to(torch.float32)
+        newX = preprocess_audio_batch(
+            torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]
+        ).to(torch.float32)
 
         return oldX, newX, y
 
@@ -109,6 +108,7 @@ class AnnotationsDataModule(pl.LightningDataModule):
 #    def test_dataloader(self):
 #        return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
+
 class ScaleLayer(nn.Module):
     def __init__(self, init_value=1e-3):
         super().__init__()
@@ -153,7 +153,6 @@ class AudioJNDModel(pl.LightningModule):
 
         return prob
 
-
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
@@ -167,25 +166,25 @@ class AudioJNDModel(pl.LightningModule):
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
         return loss
-    
+
     def validation_step(self, batch, batch_idx):
         x1, x2, y = batch
         y = y.float()
         y_hat = self.forward(x1, x2)
         loss = F.mse_loss(y_hat, y)
-        
-        self.log('val_loss', loss)
-        
+
+        self.log("val_loss", loss)
+
         return {"predictions": y_hat, "labels": y}
-    
+
     def validation_epoch_end(self, outputs):
 
         preds = []
         labels = []
-        
+
         for output in outputs:
-            preds += output['predictions']
-            labels += output['labels']
+            preds += output["predictions"]
+            labels += output["labels"]
 
         labels = torch.stack(labels)
         preds = torch.stack(preds)
@@ -199,13 +198,12 @@ class AudioJNDModel(pl.LightningModule):
         return optimizer
 
 
-
 def retrain():
     annotations_data_module = AnnotationsDataModule()
 
     model = AudioJNDModel()
-
-    trainer = pl.Trainer()
+    early_stopping_callback = EarlyStopping(monitor="val_auc", mode="max", patience=1)
+    trainer = pl.Trainer(callbacks=[early_stopping_callback])
     trainer.fit(model, annotations_data_module)
 
 
