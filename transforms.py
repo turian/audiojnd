@@ -7,6 +7,7 @@ import json
 import os.path
 import random
 
+import audiomentations
 import librosa
 import numpy as np
 import pydub
@@ -16,8 +17,6 @@ from tqdm.auto import tqdm
 
 import native_transformations
 from preprocess import ensure_length
-
-import audiomentations
 
 CONFIG = json.loads(open("config.json").read())
 
@@ -225,7 +224,7 @@ transforms = [
         [],
     ),
     # Not really obvious enough
-    #(
+    # (
     #    "audiomentations",
     #    "Mp3Compression",
     #    [],
@@ -234,7 +233,7 @@ transforms = [
     #        ("max_bitrate", [320]),
     #        ("backend", ["pydub"]),
     #    ],
-    #),
+    # ),
     ("audiomentations", "Reverse", [], []),
     # Not yet in pypi
     # (
@@ -270,11 +269,11 @@ def transform_file(f):
     transform_spec = random.choice(transforms)
     transform = "%s-%s" % (transform_spec[0], transform_spec[1])
 
-    #if transform_spec[0] != "audiomentations":
+    # if transform_spec[0] != "audiomentations":
     #    return
 
     params = {}
-    #print(transform_spec)
+    # print(transform_spec)
     for param, low, hi in transform_spec[2]:
         param, v = choose_value(param, low, hi)
         params[param] = v
@@ -319,9 +318,9 @@ def transform_file(f):
         newx = tfm(x, CONFIG["SAMPLE_RATE"])
         if transform_spec[1] == "Resample":
             newx = librosa.core.resample(
-            newx,
-            orig_sr=tfm.parameters["target_sample_rate"],
-            target_sr=CONFIG["SAMPLE_RATE"]
+                newx,
+                orig_sr=tfm.parameters["target_sample_rate"],
+                target_sr=CONFIG["SAMPLE_RATE"],
             )
         params = tfm.parameters
     else:

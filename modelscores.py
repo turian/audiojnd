@@ -72,5 +72,6 @@ def process_files(model_name):
         sim = 1 - spatial.distance.cosine(newemb.flatten(), oldemb.flatten())
         open(jsonf, "wt").write(json.dumps([newf, oldf, sim], indent=4))
 
+
 if __name__ == "__main__":
     process_files()
