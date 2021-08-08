@@ -19,6 +19,7 @@ import click
 import numpy as np
 import sklearn.cluster
 import sklearn.metrics
+from tqdm.auto import tqdm
 
 # N = 2**3 - 1
 # N = 2**1 + 1
@@ -48,15 +49,18 @@ def selecttransforms(model_name):
     random.seed(0)
     random.shuffle(files)
     transform_to_distance = defaultdict(list)
-    for f in files:
-        transformjson = f.replace(f".mp3{model_name}", "")
-        transform = json.loads(open(transformjson).read())
-        transform_type = list(transform[1].keys())[0]
-        transform_file, original_file, distance = json.loads(open(f).read())
-        assert transform_file.startswith("data/transforms/")
-        transform_to_distance[transform_type].append(
-            (distance, transform_file, original_file)
-        )
+    for f in tqdm(files):
+        try:
+            transformjson = f.replace(f".mp3{model_name}", "")
+            transform = json.loads(open(transformjson).read())
+            transform_type = list(transform[1].keys())[0]
+            transform_file, original_file, distance = json.loads(open(f).read())
+            assert transform_file.startswith("data/transforms/") or transform_file.startswith("./data/transforms/"), f"{f} {transform_file}, {original_file}"
+            transform_to_distance[transform_type].append(
+                (distance, transform_file, original_file)
+            )
+        except:
+            print(f"Skipping {f}")
 
     tot = 0
     to_label = []
