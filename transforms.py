@@ -187,7 +187,7 @@ transforms = [
         "AddBackgroundNoise",
         [],
         [
-            ("sounds_path", ["data/esc-50/ESC-50-master/audio/"]),
+            ("sounds_path", ["data/orig/FSD50K.dev_audio"]),
             ("min_snr_in_db", [0.001]),
             ("max_snr_in_db", [100]),
         ],
@@ -197,7 +197,7 @@ transforms = [
         "AddShortNoises",
         [("burst_probability", 0.01, 0.85)],
         [
-            ("sounds_path", ["data/esc-50/ESC-50-master/audio/"]),
+            ("sounds_path", ["data/orig/FSD50K.dev_audio"]),
             ("min_snr_in_db", [0.0001]),
             ("max_snr_in_db", [100]),
             ("min_time_between_sounds", [0]),
@@ -232,6 +232,7 @@ transforms = [
     #    [
     #        ("min_bitrate", [32]),
     #        ("max_bitrate", [320]),
+    #        ("backend", ["pydub"]),
     #    ],
     #),
     ("audiomentations", "Reverse", [], []),
@@ -250,16 +251,6 @@ transforms = [
         "Resample",
         [],
         [("min_sample_rate", [4000]), ("max_sample_rate", [CONFIG["SAMPLE_RATE"] - 1])],
-    ),
-    (
-        "audiomentations",
-        "Mp3Compression",
-        [],
-        [
-            ("min_bitrate", [32]),
-            ("max_bitrate", [320]),
-            ("backend", ["pydub"]),
-        ],
     ),
 ]
 
@@ -293,7 +284,8 @@ def transform_file(f):
     # Choose a wet/dry ratio between transform and original
     # This is only really necessary for ApplyImpulseResponse
     # and SpecChannelShuffle, but is generally useful and not
-    # harmful.
+    # harmful. Just means we are less likely to have drastic obvious
+    # transforms.
     wet = random.random()
 
     # outfiles = []

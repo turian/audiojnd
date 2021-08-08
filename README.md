@@ -5,16 +5,13 @@ Audio pair JND
 Installation:
 ```
 # lameenc is cooler but harder to use
-sudo apt-get install -y lame libsox-fmt-all sox ffmpeg python3-pip
-pip3 install -U tqdm sox click pydub audiomentations
+sudo apt-get install -y lame libsox-fmt-all sox ffmpeg python3-pip unzip
+pip3 install -U tqdm sox click pydub audiomentations[extras]
 pip3 install git+https://github.com/turian/torchopenl3.git
 ```
 
-Download background noise and impulse response:
+Download impulse response:
 ```
-#[could also have colored noise]
-wget https://github.com/karoldvl/ESC-50/archive/master.zip
-mkdir -p data/esc-50/ && pushd data/esc-50/ && unzip ../../master.zip && rm ../../master.zip && popd
 # Could also get echothief: http://www.echothief.com/
 wget https://mcdermottlab.mit.edu/Reverb/IRMAudio/Audio.zip
 mkdir -p data/MIT-McDermott-ImpulseResponse/ && pushd data/MIT-McDermott-ImpulseResponse/ && unzip ../../Audio.zip && rm ../../Audio.zip && popd
