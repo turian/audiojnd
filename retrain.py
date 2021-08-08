@@ -12,14 +12,19 @@ from typing import Optional
 
 import pytorch_lightning as pl
 import torch
+import torch.nn.functional as F
 import torch.nn as nn
+import torchopenl3
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
+from torchopenl3.utils import preprocess_audio_batch
 
 from preprocess import LENGTH_SAMPLES, ensure_length
 from transforms import CONFIG, pydubread
 
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
+
+
 
 
 class PairedDatset(Dataset):
@@ -46,9 +51,14 @@ class PairedDatset(Dataset):
         assert oldx.shape == newx.shape, f"{oldx.shape} != {newx.shape}"
         assert oldx.shape == (nsamples,)
 
-        print(oldx.shape, newx.shape)
-        sys.stdout.flush()
-        return oldx, newx, y
+        oldX = preprocess_audio_batch(torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
+            torch.float32
+        )
+        newX = preprocess_audio_batch(torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
+            torch.float32
+        )
+
+        return oldX, newX, y
 
     def __len__(self):
         return len(self.rows)
@@ -85,6 +95,7 @@ class AnnotationsDataModule(pl.LightningDataModule):
         )
         # TODO: This dataloader won't allow kfold
 
+    # TODO: num_workers, etc.
     def train_dataloader(self):
         return DataLoader(ConcatDataset(self.folds[1:]), batch_size=self.batch_size)
 
@@ -95,43 +106,74 @@ class AnnotationsDataModule(pl.LightningDataModule):
 #    def test_dataloader(self):
 #        return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
+class ScaleLayer(nn.Module):
+    def __init__(self, init_value=1e-3):
+        super().__init__()
+        self.scale = nn.Parameter(torch.FloatTensor([init_value] * 6144))
 
-class VisionModel(pl.LightningModule):
+    def forward(self, input):
+        return input * self.scale
+
+
+class AudioJNDModel(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        
-        # pretrained?
-        self.vision = torchvision.models.resnet101()
+        self.model = torchopenl3.models.load_audio_embedding_model(
+            input_repr="mel256", content_type="env", embedding_size=6144
+        )
+        self.scale = ScaleLayer()
+        # Could also try l1 with crossentropy
+        self.cos = nn.CosineSimilarity(eps=1e-6)
 
-    def forward(self, x):
-        # Probably want to do smart Mel initialization
-        # in lightning, forward defines the prediction/inference actions
-        embedding = self.encoder(x)
-        return embedding
+    def forward(self, x1, x2):
+        bs, _, in2, in3 = x1.size()
+
+        print(x1.shape, x2.shape)
+
+        # TODO: Also try with gradient?
+        with torch.no_grad():
+            x1 = self.model(x1.view(-1, in2, in3))
+            x2 = self.model(x2.view(-1, in2, in3))
+
+        print(x1.shape, x2.shape)
+
+        x1 = self.scale(x1).view(bs, -1)
+        x2 = self.scale(x2).view(bs, -1)
+
+        print(x1.shape, x2.shape)
+
+        prob = self.cos(x1, x2)
+        assert torch.all((prob < 1) & (prob > -1))
+
+        prob = (prob + 1) / 2
+        assert torch.all((prob < 1) & (prob > 0))
+
+        return prob
+
 
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
         x1, x2, y = batch
-        print(x1.shape)
-        print(x2.shape)
-        x = x.view(x.size(0), -1)
-        z = self.encoder(x)
-        x_hat = self.decoder(z)
-        loss = F.mse_loss(x_hat, x)
+        y_hat = self.forward(x1, x2)
+        # Could also try cosine embedding loss and bceloss and just
+        # simple l1 loss
+        loss = F.mse_loss(y_hat, y)
         # Logging to TensorBoard by default
         self.log("train_loss", loss)
         return loss
 
     def configure_optimizers(self):
+        # TODO: weight decay?
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
+
 
 
 def retrain():
     annotations_data_module = AnnotationsDataModule()
 
-    model = VisionModel()
+    model = AudioJNDModel()
 
     trainer = pl.Trainer()
     trainer.fit(model, annotations_data_module)
