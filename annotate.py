@@ -28,17 +28,25 @@ import click
 CONTROL_PERCENT = 0.4
 
 
-def choose_pair(pairs, orig_pairs):
-    if len(pairs) == 0:
-        print("Done with all annotations.")
-        sys.exit(0)
-
+def choose_pair(pairs, orig_pairs, goldrows):
     if random.random() < CONTROL_PERCENT:
         oldf, _ = random.choice(orig_pairs)
         newf = oldf
     else:
-        oldf, newf = pairs[0]
-        pairs = pairs[1:]
+        while 1:
+            if len(pairs) == 0:
+                print("Done with all annotations.")
+                sys.exit(0)
+            oldf, newf = pairs[0]
+            pairs = pairs[1:]
+
+            found = False
+            for oldf2, newf2, y in goldrows:
+                if oldf2 == oldf and newf2 == newf:
+                    found = True
+                    break
+            if not found:
+                break
 
     if random.random() < 0.5:
         a, b = oldf, newf
@@ -60,12 +68,12 @@ def check_input(
     if c == ord("a"):
         goldrows.append([oldf, newf, 0])
         write_rows(goldcsv, goldrows)
-        oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs)
+        oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs, goldrows)
     elif c == ord("l"):
         if oldf != newf:
             goldrows.append([oldf, newf, 1])
             write_rows(goldcsv, goldrows)
-        oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs)
+        oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs, goldrows)
     elif c == ord("q"):
         return None, None, None, None, None
     return oldf, newf, a, b, pairs
@@ -92,7 +100,7 @@ def annotate(model_name):
 
     stdscr.addstr(0, 0, "a = no difference, l = difference, q = quit")
     line = 1
-    oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs)
+    oldf, newf, a, b, pairs = choose_pair(pairs, orig_pairs, goldrows)
     try:
         while 1:
             print("Play A")
