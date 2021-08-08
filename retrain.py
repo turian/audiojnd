@@ -35,8 +35,8 @@ class PairedDatset(Dataset):
 
         # This is copied from modelscores.py,
         # maybe make this a util
-        if LENGTHRE.match(newf):
-            length = float(LENGTHRE.match(newf).group(1))
+        if LENGTHRE.match(oldf):
+            length = float(LENGTHRE.match(oldf).group(1))
             nsamples = dict(LENGTH_SAMPLES)[length]
         else:
             assert False
@@ -96,17 +96,15 @@ class AnnotationsDataModule(pl.LightningDataModule):
 #        return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
-class LitAutoEncoder(pl.LightningModule):
+class VisionModel(pl.LightningModule):
     def __init__(self):
         super().__init__()
-        self.encoder = nn.Sequential(
-            nn.Linear(28 * 28, 64), nn.ReLU(), nn.Linear(64, 3)
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(3, 64), nn.ReLU(), nn.Linear(64, 28 * 28)
-        )
+        
+        # pretrained?
+        self.vision = torchvision.models.resnet101()
 
     def forward(self, x):
+        # Probably want to do smart Mel initialization
         # in lightning, forward defines the prediction/inference actions
         embedding = self.encoder(x)
         return embedding
@@ -114,7 +112,9 @@ class LitAutoEncoder(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
-        x, y = batch
+        x1, x2, y = batch
+        print(x1.shape)
+        print(x2.shape)
         x = x.view(x.size(0), -1)
         z = self.encoder(x)
         x_hat = self.decoder(z)
@@ -131,7 +131,7 @@ class LitAutoEncoder(pl.LightningModule):
 def retrain():
     annotations_data_module = AnnotationsDataModule()
 
-    model = LitAutoEncoder()
+    model = VisionModel()
 
     trainer = pl.Trainer()
     trainer.fit(model, annotations_data_module)
