@@ -55,7 +55,11 @@ def selecttransforms(model_name):
             transform = json.loads(open(transformjson).read())
             transform_type = list(transform[1].keys())[0]
             transform_file, original_file, distance = json.loads(open(f).read())
-            assert transform_file.startswith("data/transforms/") or transform_file.startswith("./data/transforms/"), f"{f} {transform_file}, {original_file}"
+            assert transform_file.startswith(
+                "data/transforms/"
+            ) or transform_file.startswith(
+                "./data/transforms/"
+            ), f"{f} {transform_file}, {original_file}"
             transform_to_distance[transform_type].append(
                 (distance, transform_file, original_file)
             )
@@ -109,7 +113,12 @@ def selecttransforms(model_name):
             print(list(glob.glob(os.path.splitext(transformed_file)[0] + "*")))
             copyfilewithpath(transformed_file)
             copyfilewithpath(orig_file)
-            to_label.append([orig_file, transformed_file])
+            to_label.append(
+                [
+                    os.path.join(base_dir, orig_file),
+                    os.path.join(base_dir, transformed_file),
+                ]
+            )
 
         # print("l1 dispersion", np.sum(sklearn.metrics.pairwise.euclidean_distances(d)))
         # print("l1 dispersion", np.sum(sklearn.metrics.pairwise.manhattan_distances(d)))

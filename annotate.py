@@ -25,7 +25,8 @@ import click
 
 # Since the initial annotation has a lot of different ones,
 # inject this % duplicates as a control
-CONTROL_PERCENT = 0.4
+# CONTROL_PERCENT = 0.4
+CONTROL_PERCENT = 0.0
 
 
 def choose_pair(pairs, orig_pairs, goldrows):
@@ -52,7 +53,15 @@ def choose_pair(pairs, orig_pairs, goldrows):
         a, b = oldf, newf
     else:
         b, a = oldf, newf
-    return oldf, newf, a, b, pairs
+
+    if not os.path.exists(oldf):
+        print(f"{oldf} missing")
+        return choose_pair(pairs, orig_pairs, goldrows)
+    elif not os.path.exists(newf):
+        print(f"{newf} missing")
+        return choose_pair(pairs, orig_pairs, goldrows)
+    else:
+        return oldf, newf, a, b, pairs
 
 
 def write_rows(goldcsv, goldrows):
