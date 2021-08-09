@@ -21,10 +21,10 @@ from torchopenl3.utils import preprocess_audio_batch
 from preprocess import LENGTH_SAMPLES, ensure_length
 from transforms import CONFIG, pydubread
 
+from sklearn.metrics import roc_auc_score
+
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
-
-
 
 
 class PairedDatset(Dataset):
@@ -51,12 +51,12 @@ class PairedDatset(Dataset):
         assert oldx.shape == newx.shape, f"{oldx.shape} != {newx.shape}"
         assert oldx.shape == (nsamples,)
 
-        oldX = preprocess_audio_batch(torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
-            torch.float32
-        )
-        newX = preprocess_audio_batch(torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
-            torch.float32
-        )
+        oldX = preprocess_audio_batch(
+            torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]
+        ).to(torch.float32)
+        newX = preprocess_audio_batch(
+            torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]
+        ).to(torch.float32)
 
         return oldX, newX, y
 
@@ -107,6 +107,7 @@ class AnnotationsDataModule(pl.LightningDataModule):
 #    def test_dataloader(self):
 #        return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
+
 class ScaleLayer(nn.Module):
     def __init__(self, init_value=1e-3):
         super().__init__()
@@ -151,7 +152,6 @@ class AudioJNDModel(pl.LightningModule):
 
         return prob
 
-
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
@@ -166,11 +166,46 @@ class AudioJNDModel(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def validation_step(self, batch, batch_idx):
+        x1, x2, y = batch
+        y = y.float()
+        y_hat = self.forward(x1, x2)
+        loss = F.mse_loss(y_hat, y)
+
+        self.log("val_loss", loss)
+
+        return {"predictions": y_hat, "labels": y}
+
+    def validation_epoch_end(self, outputs):
+
+        preds = []
+        labels = []
+
+        for output in outputs:
+            preds += output["predictions"]
+            labels += output["labels"]
+
+        labels = torch.stack(labels)
+        preds = torch.stack(preds)
+
+        labels = labels.detach().cpu()
+
+        preds = preds.detach().cpu()
+
+        try:
+            val_auc = roc_auc_score(labels, preds)
+        except ValueError:  # if the batch has only one class
+            preds = torch.hstack((preds, torch.tensor([0.5, 0.5])))
+            labels = torch.hstack((labels, torch.tensor([0.0, 1.0])))
+            val_auc = roc_auc_score(labels, preds)
+
+        val_auc = roc_auc_score(labels.detach().cpu(), preds.detach().cpu())
+        self.log("val_auc", val_auc)
+
     def configure_optimizers(self):
         # TODO: weight decay?
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
-
 
 
 def retrain():
