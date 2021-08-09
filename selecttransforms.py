@@ -110,9 +110,11 @@ def selecttransforms(model_name):
 
         for score, transformed_file, orig_file in final_scores:
             print(score, transformed_file, orig_file)
-            print(list(glob.glob(os.path.splitext(transformed_file)[0] + "*")))
             copyfilewithpath(transformed_file)
             copyfilewithpath(orig_file)
+            for f in glob.glob(os.path.splitext(transformed_file)[0] + "*"):
+                if not f.endswith(".wav"):
+                    copyfilewithpath(f)
             to_label.append(
                 [
                     os.path.join(base_dir, orig_file),
