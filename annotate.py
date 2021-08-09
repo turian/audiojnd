@@ -48,6 +48,8 @@ def choose_pair(pairs, orig_pairs, goldrows):
                     break
             if not found:
                 break
+    oldf = os.path.normpath(oldf)
+    newf = os.path.normpath(newf)
 
     if random.random() < 0.5:
         a, b = oldf, newf
