@@ -15,21 +15,22 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import torchopenl3
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
+from torch.utils.data import DataLoader, Dataset, random_split
 from torchopenl3.utils import preprocess_audio_batch
 
 from preprocess import LENGTH_SAMPLES, ensure_length
 from transforms import CONFIG, pydubread
 
+from sklearn.model_selection import StratifiedKFold
+import pandas as pd
+
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
 
 
-
-
 class PairedDatset(Dataset):
-    def __init__(self, rows):
-        self.rows = rows
+    def __init__(self, df):
+        self.rows = df[["infile", "transfile", "y"]].values
 
     def __getitem__(self, idx):
         oldf, newf, y = self.rows[idx]
@@ -51,12 +52,12 @@ class PairedDatset(Dataset):
         assert oldx.shape == newx.shape, f"{oldx.shape} != {newx.shape}"
         assert oldx.shape == (nsamples,)
 
-        oldX = preprocess_audio_batch(torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
-            torch.float32
-        )
-        newX = preprocess_audio_batch(torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]).to(
-            torch.float32
-        )
+        oldX = preprocess_audio_batch(
+            torch.tensor(oldx).unsqueeze(0), CONFIG["SAMPLE_RATE"]
+        ).to(torch.float32)
+        newX = preprocess_audio_batch(
+            torch.tensor(newx).unsqueeze(0), CONFIG["SAMPLE_RATE"]
+        ).to(torch.float32)
 
         return oldX, newX, y
 
@@ -68,10 +69,13 @@ class AnnotationsDataModule(pl.LightningDataModule):
     # batch_size = 1 because we have two different audio lengths :\
     # Otherwise we could try writing our own collate_fn
     # There might also be a way to interleave batches from two datasets
-    def __init__(self, data_dir: str = "data/iterations", batch_size: int = 1):
+    def __init__(
+        self, data_dir: str = "data/iterations/", fold: int = 0, batch_size: int = 1
+    ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.fold = fold
 
     def setup(self, stage: Optional[str] = None):
         self.rows = []
@@ -85,27 +89,30 @@ class AnnotationsDataModule(pl.LightningDataModule):
                 # Only use dev, not eval
                 if "FSD50K.eval_audio" in infile:
                     continue
-                # TODO: Remove any duplicates within the same file!!!
-                self.rows.append((infile, transfile, y))
-        print(len(self.rows))
-        self.dataset = PairedDatset(self.rows)
-        num, div = len(self.rows), FOLDS
-        fold_idx = [num // div + (1 if x < num % div else 0) for x in range(div)]
-        self.folds = random_split(
-            self.dataset, fold_idx, generator=torch.Generator().manual_seed(42)
-        )
-        # TODO: This dataloader won't allow kfold
+                self.rows.append([infile, transfile, y])
+
+        self.df = pd.DataFrame(self.rows, columns=["infile", "transfile", "y"])
+        self.df.drop_duplicates(inplace=True)
+        self.df.reset_index(drop=True, inplace=True)
+
+        skf = StratifiedKFold(n_splits=FOLDS)
+        for i, (trn_, val_) in enumerate(skf.split(self.df, self.df["y"])):
+            self.df.loc[val_, "kfold"] = i
+
+        self.train_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
+        self.val_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
 
     # TODO: num_workers, etc.
     def train_dataloader(self):
-        return DataLoader(ConcatDataset(self.folds[1:]), batch_size=self.batch_size)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size)
 
     def val_dataloader(self):
-        return DataLoader(self.folds[0], batch_size=self.batch_size)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size)
 
 
 #    def test_dataloader(self):
 #        return DataLoader(self.mnist_test, batch_size=self.batch_size)
+
 
 class ScaleLayer(nn.Module):
     def __init__(self, init_value=1e-3):
@@ -151,7 +158,6 @@ class AudioJNDModel(pl.LightningModule):
 
         return prob
 
-
     def training_step(self, batch, batch_idx):
         # training_step defined the train loop.
         # It is independent of forward
@@ -170,7 +176,6 @@ class AudioJNDModel(pl.LightningModule):
         # TODO: weight decay?
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
-
 
 
 def retrain():
