@@ -28,6 +28,30 @@ FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
 
 
+def process_files(data_dir: str = "data/iterations/"):
+    rows = []
+    print(os.path.join(data_dir, "*/annotation*csv"))
+    for csvfile in glob.glob(os.path.join(data_dir, "*/annotation*csv")):
+        print(csvfile)
+        for infile, transfile, y in csv.reader(open(csvfile)):
+            y = float(y)
+            if infile == transfile:
+                continue
+            # Only use dev, not eval
+            if "FSD50K.eval_audio" in infile:
+                continue
+            rows.append([infile, transfile, y])
+
+    df = pd.DataFrame(rows, columns=["infile", "transfile", "y"])
+    df.drop_duplicates(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    skf = StratifiedKFold(n_splits=FOLDS, random_state=42, shuffle=True)
+    for i, (trn_, val_) in enumerate(skf.split(df, df["y"])):
+        df.loc[val_, "kfold"] = i
+    return df
+
+
 class PairedDatset(Dataset):
     def __init__(self, df):
         self.rows = df[["infile", "transfile", "y"]].values
@@ -69,36 +93,13 @@ class AnnotationsDataModule(pl.LightningDataModule):
     # batch_size = 1 because we have two different audio lengths :\
     # Otherwise we could try writing our own collate_fn
     # There might also be a way to interleave batches from two datasets
-    def __init__(
-        self, data_dir: str = "data/iterations/", fold: int = 0, batch_size: int = 1
-    ):
+    def __init__(self, df, fold: int = 0, batch_size: int = 1):
         super().__init__()
-        self.data_dir = data_dir
+        self.df = df
         self.batch_size = batch_size
         self.fold = fold
 
     def setup(self, stage: Optional[str] = None):
-        self.rows = []
-        print(os.path.join(self.data_dir, "*/annotation*csv"))
-        for csvfile in glob.glob(os.path.join(self.data_dir, "*/annotation*csv")):
-            print(csvfile)
-            for infile, transfile, y in csv.reader(open(csvfile)):
-                y = float(y)
-                if infile == transfile:
-                    continue
-                # Only use dev, not eval
-                if "FSD50K.eval_audio" in infile:
-                    continue
-                self.rows.append([infile, transfile, y])
-
-        self.df = pd.DataFrame(self.rows, columns=["infile", "transfile", "y"])
-        self.df.drop_duplicates(inplace=True)
-        self.df.reset_index(drop=True, inplace=True)
-
-        skf = StratifiedKFold(n_splits=FOLDS)
-        for i, (trn_, val_) in enumerate(skf.split(self.df, self.df["y"])):
-            self.df.loc[val_, "kfold"] = i
-
         self.train_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
         self.val_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
 
@@ -179,7 +180,8 @@ class AudioJNDModel(pl.LightningModule):
 
 
 def retrain():
-    annotations_data_module = AnnotationsDataModule()
+    df = process_files()
+    annotations_data_module = AnnotationsDataModule(df)
 
     model = AudioJNDModel()
 
