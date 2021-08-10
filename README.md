@@ -33,6 +33,7 @@ LLVM_CONFIG=/usr/bin/llvm-config-10 CXXFLAGS=-fPIC pip3 install llvmlite
 Usage:
 ```
 ./get_fsd50.py
+./remove_nsfw.py
 ./get_backgroundnoise.py
 ./preprocess.py
 ./transforms.py
