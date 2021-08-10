@@ -23,7 +23,8 @@ from tqdm.auto import tqdm
 
 # N = 2**3 - 1
 # N = 2**1 + 1
-N = 10
+#N = 10
+N = 333
 
 """
 def select_transforms(transform_to_distance, minscore, maxscore, N=N-2):
@@ -46,8 +47,8 @@ def selecttransforms(model_name):
     base_dir = os.path.join("data/iterations", model_name)
     os.makedirs(base_dir)
     files = list(glob.glob(f"data/transforms/*/*/*.mp3{model_name}.json"))
-    random.seed(0)
-    random.shuffle(files)
+    #random.seed(0)
+    #random.shuffle(files)
     transform_to_distance = defaultdict(list)
     for f in tqdm(files):
         try:
@@ -109,14 +110,16 @@ def selecttransforms(model_name):
             shutil.copy(src, newpath)
 
         for score, transformed_file, orig_file in final_scores:
-            print(score, transformed_file, orig_file)
-            print(list(glob.glob(os.path.splitext(transformed_file)[0] + "*")))
+            #print(score, transformed_file, orig_file)
             copyfilewithpath(transformed_file)
             copyfilewithpath(orig_file)
+            for f in list(glob.glob(os.path.splitext(transformed_file)[0] + "*")):
+                if not f.endswith(".wav"):
+                    copyfilewithpath(f)
             to_label.append(
                 [
-                    os.path.join(base_dir, orig_file),
-                    os.path.join(base_dir, transformed_file),
+                    os.path.normpath(os.path.join(base_dir, orig_file)),
+                    os.path.normpath(os.path.join(base_dir, transformed_file)),
                 ]
             )
 
