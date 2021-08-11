@@ -29,6 +29,7 @@ from transforms import CONFIG, pydubread
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
 
+
 def process_files(data_dir: str = "data/iterations/"):
     rows = []
     print(os.path.join(data_dir, "*/annotation*csv"))
@@ -171,8 +172,8 @@ class MelEmbedding(nn.Module):
             fmin=0.0,
             fmax=None,
             norm=1,
-            #trainable_mel=True,
-            #trainable_STFT=True,
+            # trainable_mel=True,
+            # trainable_STFT=True,
             trainable_mel=False,
             trainable_STFT=False,
         )
@@ -204,10 +205,7 @@ class AudioJNDModel(pl.LightningModule):
     def forward(self, x1, x2):
         # batch size x nframes x 1 channel x 48000 samples
         bs, _, in2, in3 = x1.size()
-        # This code is probably broken for different batch sizes
-        assert bs == 1
-
-        print(x1.shape, x2.shape)
+        # print(x1.shape, x2.shape)
 
         # TODO: Also try with gradient?
         with torch.no_grad():
@@ -218,7 +216,7 @@ class AudioJNDModel(pl.LightningModule):
         x1 = self.scale(x1).view(bs, -1)
         x2 = self.scale(x2).view(bs, -1)
 
-        print(x1.shape, x2.shape)
+        # print(x1.shape, x2.shape)
 
         prob = self.cos(x1, x2)
         assert torch.all((prob < 1) & (prob > -1))
