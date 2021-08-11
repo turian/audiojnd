@@ -101,7 +101,7 @@ class AnnotationsDataModule(pl.LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         self.train_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
-        self.val_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
+        self.val_dataset = PairedDatset(self.df[self.df.kfold == self.fold])
 
     # TODO: num_workers, etc.
     def train_dataloader(self):
