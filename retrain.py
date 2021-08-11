@@ -10,27 +10,52 @@ import os.path
 import re
 from typing import Optional
 
+import pandas as pd
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import EarlyStopping
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 import torchopenl3
-from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
+from pytorch_lightning.callbacks import EarlyStopping
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold
+from torch.utils.data import DataLoader, Dataset, random_split
 from torchopenl3.utils import preprocess_audio_batch
 
 from preprocess import LENGTH_SAMPLES, ensure_length
 from transforms import CONFIG, pydubread
 
-from sklearn.metrics import roc_auc_score
-
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
 
 
+def process_files(data_dir: str = "data/iterations/"):
+    rows = []
+    print(os.path.join(data_dir, "*/annotation*csv"))
+    for csvfile in glob.glob(os.path.join(data_dir, "*/annotation*csv")):
+        print(csvfile)
+        for infile, transfile, y in csv.reader(open(csvfile)):
+            y = float(y)
+            if infile == transfile:
+                continue
+            # Only use dev, not eval
+            if "FSD50K.eval_audio" in infile:
+                continue
+            rows.append([infile, transfile, y])
+
+    df = pd.DataFrame(rows, columns=["infile", "transfile", "y"])
+    df.drop_duplicates(inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    skf = StratifiedKFold(n_splits=FOLDS, random_state=42, shuffle=True)
+    for i, (trn_, val_) in enumerate(skf.split(df, df["y"])):
+        df.loc[val_, "kfold"] = i
+    return df
+
+
 class PairedDatset(Dataset):
-    def __init__(self, rows):
-        self.rows = rows
+    def __init__(self, df):
+        self.rows = df[["infile", "transfile", "y"]].values
 
     def __getitem__(self, idx):
         oldf, newf, y = self.rows[idx]
@@ -69,40 +94,22 @@ class AnnotationsDataModule(pl.LightningDataModule):
     # batch_size = 1 because we have two different audio lengths :\
     # Otherwise we could try writing our own collate_fn
     # There might also be a way to interleave batches from two datasets
-    def __init__(self, data_dir: str = "data/iterations", batch_size: int = 1):
+    def __init__(self, df, fold: int = 0, batch_size: int = 1):
         super().__init__()
-        self.data_dir = data_dir
+        self.df = df
         self.batch_size = batch_size
+        self.fold = fold
 
     def setup(self, stage: Optional[str] = None):
-        self.rows = []
-        print(os.path.join(self.data_dir, "*/annotation*csv"))
-        for csvfile in glob.glob(os.path.join(self.data_dir, "*/annotation*csv")):
-            print(csvfile)
-            for infile, transfile, y in csv.reader(open(csvfile)):
-                y = float(y)
-                if infile == transfile:
-                    continue
-                # Only use dev, not eval
-                if "FSD50K.eval_audio" in infile:
-                    continue
-                # TODO: Remove any duplicates within the same file!!!
-                self.rows.append((infile, transfile, y))
-        print(len(self.rows))
-        self.dataset = PairedDatset(self.rows)
-        num, div = len(self.rows), FOLDS
-        fold_idx = [num // div + (1 if x < num % div else 0) for x in range(div)]
-        self.folds = random_split(
-            self.dataset, fold_idx, generator=torch.Generator().manual_seed(42)
-        )
-        # TODO: This dataloader won't allow kfold
+        self.train_dataset = PairedDatset(self.df[self.df.kfold != self.fold])
+        self.val_dataset = PairedDatset(self.df[self.df.kfold == self.fold])
 
     # TODO: num_workers, etc.
     def train_dataloader(self):
-        return DataLoader(ConcatDataset(self.folds[1:]), batch_size=self.batch_size)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size)
 
     def val_dataloader(self):
-        return DataLoader(self.folds[0], batch_size=self.batch_size)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size)
 
 
 #    def test_dataloader(self):
@@ -207,7 +214,8 @@ class AudioJNDModel(pl.LightningModule):
 
 
 def retrain():
-    annotations_data_module = AnnotationsDataModule()
+    df = process_files()
+    annotations_data_module = AnnotationsDataModule(df)
 
     model = AudioJNDModel()
     early_stopping_callback = EarlyStopping(monitor="val_auc", mode="max", patience=1)
