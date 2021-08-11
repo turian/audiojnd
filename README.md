@@ -6,7 +6,7 @@ Installation:
 ```
 # lameenc is cooler but harder to use
 sudo apt-get install -y lame libsox-fmt-all sox ffmpeg python3-pip unzip
-pip3 install -U tqdm sox click pydub audiomentations[extras] sklearn soundfile pytorch-lightning nnAudio
+pip3 install -U pandas tqdm sox click pydub audiomentations[extras] sklearn soundfile pytorch-lightning nnAudio
 pip3 install -U torchopenl3
 ```
 
