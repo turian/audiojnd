@@ -11,6 +11,7 @@ import re
 from typing import Optional
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import EarlyStopping
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
@@ -195,11 +196,8 @@ class AudioJNDModel(pl.LightningModule):
         try:
             val_auc = roc_auc_score(labels, preds)
         except ValueError:  # if the batch has only one class
-            preds = torch.hstack((preds, torch.tensor([0.5, 0.5])))
-            labels = torch.hstack((labels, torch.tensor([0.0, 1.0])))
-            val_auc = roc_auc_score(labels, preds)
+            val_auc = 0.0
 
-        val_auc = roc_auc_score(labels.detach().cpu(), preds.detach().cpu())
         self.log("val_auc", val_auc)
 
     def configure_optimizers(self):
@@ -212,8 +210,8 @@ def retrain():
     annotations_data_module = AnnotationsDataModule()
 
     model = AudioJNDModel()
-
-    trainer = pl.Trainer()
+    early_stopping_callback = EarlyStopping(monitor="val_auc", mode="max", patience=1)
+    trainer = pl.Trainer(callbacks=[early_stopping_callback])
     trainer.fit(model, annotations_data_module)
 
 
