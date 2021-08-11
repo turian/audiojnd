@@ -10,19 +10,20 @@ import os.path
 import re
 from typing import Optional
 
+import pandas as pd
 import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
 import torch.nn as nn
+import torch.nn.functional as F
 import torchopenl3
+from pytorch_lightning.callbacks import EarlyStopping
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import StratifiedKFold
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchopenl3.utils import preprocess_audio_batch
 
 from preprocess import LENGTH_SAMPLES, ensure_length
 from transforms import CONFIG, pydubread
-
-from sklearn.model_selection import StratifiedKFold
-import pandas as pd
 
 FOLDS = 5
 LENGTHRE = re.compile(".*\.wav-([0-9\.]+)\..*")
@@ -173,6 +174,39 @@ class AudioJNDModel(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
+    def validation_step(self, batch, batch_idx):
+        x1, x2, y = batch
+        y = y.float()
+        y_hat = self.forward(x1, x2)
+        loss = F.mse_loss(y_hat, y)
+
+        self.log("val_loss", loss)
+
+        return {"predictions": y_hat, "labels": y}
+
+    def validation_epoch_end(self, outputs):
+
+        preds = []
+        labels = []
+
+        for output in outputs:
+            preds += output["predictions"]
+            labels += output["labels"]
+
+        labels = torch.stack(labels)
+        preds = torch.stack(preds)
+
+        labels = labels.detach().cpu()
+
+        preds = preds.detach().cpu()
+
+        try:
+            val_auc = roc_auc_score(labels, preds)
+        except ValueError:  # if the batch has only one class
+            val_auc = 0.0
+
+        self.log("val_auc", val_auc)
+
     def configure_optimizers(self):
         # TODO: weight decay?
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
@@ -184,8 +218,8 @@ def retrain():
     annotations_data_module = AnnotationsDataModule(df)
 
     model = AudioJNDModel()
-
-    trainer = pl.Trainer()
+    early_stopping_callback = EarlyStopping(monitor="val_auc", mode="max", patience=1)
+    trainer = pl.Trainer(callbacks=[early_stopping_callback])
     trainer.fit(model, annotations_data_module)
 
 
