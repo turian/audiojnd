@@ -25,10 +25,6 @@ files = list(glob.glob("data/orig/FSD50K.dev_audio/*wav")) + list(
 
 CONFIG = json.loads(open("config.json").read())
 
-LENGTH_SAMPLES = [
-    (l, int(round(CONFIG["SAMPLE_RATE"] * l))) for l in CONFIG["AUDIO_LENGTHS"]
-]
-
 
 def ensure_length(x, length_in_samples, from_start=False):
     if len(x) < length_in_samples:

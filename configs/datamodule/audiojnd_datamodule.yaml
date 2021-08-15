@@ -1,0 +1,8 @@
+data_dir: ${data_dir} 
+data_config: ${data_config} 
+fold: 0
+num_workers: 0
+pin_memory: False
+train_batch_size: 1
+val_batch_size: 1
+num_folds: 5

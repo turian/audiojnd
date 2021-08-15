@@ -23,7 +23,7 @@ from tqdm.auto import tqdm
 
 # N = 2**3 - 1
 # N = 2**1 + 1
-#N = 10
+# N = 10
 N = 333
 
 """
@@ -47,8 +47,8 @@ def selecttransforms(model_name):
     base_dir = os.path.join("data/iterations", model_name)
     os.makedirs(base_dir)
     files = list(glob.glob(f"data/transforms/*/*/*.mp3{model_name}.json"))
-    #random.seed(0)
-    #random.shuffle(files)
+    # random.seed(0)
+    # random.shuffle(files)
     transform_to_distance = defaultdict(list)
     for f in tqdm(files):
         try:
@@ -56,14 +56,10 @@ def selecttransforms(model_name):
             transform = json.loads(open(transformjson).read())
             transform_type = list(transform[1].keys())[0]
             transform_file, original_file, distance = json.loads(open(f).read())
-            assert transform_file.startswith(
-                "data/transforms/"
-            ) or transform_file.startswith(
+            assert transform_file.startswith("data/transforms/") or transform_file.startswith(
                 "./data/transforms/"
             ), f"{f} {transform_file}, {original_file}"
-            transform_to_distance[transform_type].append(
-                (distance, transform_file, original_file)
-            )
+            transform_to_distance[transform_type].append((distance, transform_file, original_file))
         except:
             print(f"Skipping {f}")
 
@@ -95,9 +91,7 @@ def selecttransforms(model_name):
         print(best_points)
 
         # TODO: Save this to a JSON file
-        final_scores = sorted(
-            np.array(transform_to_distance[transform_type])[best_idx].tolist()
-        )
+        final_scores = sorted(np.array(transform_to_distance[transform_type])[best_idx].tolist())
         open(os.path.join(base_dir, f"{transform_type}.json"), "wt").write(
             json.dumps(final_scores, indent=4)
         )
@@ -110,7 +104,7 @@ def selecttransforms(model_name):
             shutil.copy(src, newpath)
 
         for score, transformed_file, orig_file in final_scores:
-            #print(score, transformed_file, orig_file)
+            # print(score, transformed_file, orig_file)
             copyfilewithpath(transformed_file)
             copyfilewithpath(orig_file)
             for f in list(glob.glob(os.path.splitext(transformed_file)[0] + "*")):

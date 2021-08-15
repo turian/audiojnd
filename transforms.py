@@ -65,31 +65,17 @@ transforms = [
     ("sox", "bandreject", [("midi", 0, 127), ("width_q", 0.01, 5)], []),
     ("sox", "bass", [("gain_db", -20, 20), ("midi", 0, 127), ("slope", 0.3, 1.0)], []),
     # bend
-    (
-        "sox",
-        "chorus",
-        [("gain_in", 0.0, 1.0), ("gain_out", 0.0, 1.0)],
-        [("n_voices", [2, 3, 4])],
-    ),
+    ("sox", "chorus", [("gain_in", 0.0, 1.0), ("gain_out", 0.0, 1.0)], [("n_voices", [2, 3, 4])],),
     (
         "sox",
         "compand",
-        [
-            ("attack_time", 0.01, 1.0),
-            ("decay_time", 0.01, 2.0),
-            ("soft_knee_db", 0.0, 12.0),
-        ],
+        [("attack_time", 0.01, 1.0), ("decay_time", 0.01, 2.0), ("soft_knee_db", 0.0, 12.0),],
         [],
     ),
     ("sox", "contrast", [("amount", 0, 100)], []),
     # delays and decays and n_echos
     ("sox", "echo", [("gain_in", 0, 1), ("gain_out", 0, 1)], []),
-    (
-        "sox",
-        "equalizer",
-        [("midi", 0, 127), ("gain_db", -20, 20), ("width_q", 0.01, 5)],
-        [],
-    ),
+    ("sox", "equalizer", [("midi", 0, 127), ("gain_db", -20, 20), ("width_q", 0.01, 5)], [],),
     (
         "sox",
         "fade",
@@ -119,12 +105,7 @@ transforms = [
             ("balance", [None, "e", "B", "b"]),
         ],
     ),
-    (
-        "sox",
-        "highpass",
-        [("midi", 0, 127), ("width_q", 0.01, 5)],
-        [("n_poles", [1, 2])],
-    ),
+    ("sox", "highpass", [("midi", 0, 127), ("width_q", 0.01, 5)], [("n_poles", [1, 2])],),
     # loudness: Loudness control. Similar to the gain effect, but
     # provides equalisation for the human auditory system.
     ("sox", "lowpass", [("midi", 0, 127), ("width_q", 0.01, 5)], [("n_poles", [1, 2])]),
@@ -167,12 +148,7 @@ transforms = [
         [("factor", 0.5, 1.5)],
         [("audio_type", ["m", "s", "l"]), ("quick", [True, False])],
     ),
-    (
-        "sox",
-        "treble",
-        [("gain_db", -20, 20), ("midi", 0, 127), ("slope", 0.3, 1.0)],
-        [],
-    ),
+    ("sox", "treble", [("gain_db", -20, 20), ("midi", 0, 127), ("slope", 0.3, 1.0)], [],),
     ("sox", "tremolo", [("speed", 0.1, 10.0), ("depth", 0, 100)], []),
     # Audiomentations Transforms
     (
@@ -214,15 +190,7 @@ transforms = [
             ("leave_length_unchanged", [True]),
         ],
     ),
-    (
-        "audiomentations",
-        "Clip",
-        [
-            ("a_min", -1.0, 0.0),
-            ("a_max", 0.0, 1.0),
-        ],
-        [],
-    ),
+    ("audiomentations", "Clip", [("a_min", -1.0, 0.0), ("a_max", 0.0, 1.0),], [],),
     # Not really obvious enough
     # (
     #    "audiomentations",
@@ -355,9 +323,7 @@ def transform_file(f):
 
 
 if __name__ == "__main__":
-    files = list(
-        glob.glob(f"data/preprocessed/FSD50K.dev_audio/*.{CONFIG['EXTENSION']}")
-    )
+    files = list(glob.glob(f"data/preprocessed/FSD50K.dev_audio/*.{CONFIG['EXTENSION']}"))
     """
     # Always shuffle the files deterministically (seed 0),
     # even if we use non-deterministic transforms of the audio.

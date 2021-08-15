@@ -16,13 +16,11 @@ import numpy as np
 
 MODEL = "openl3gold"
 FOLDS = 3
-SCORING = 'accuracy'
+SCORING = "accuracy"
 
 X = []
 y = []
-for score, _, _, label in csv.reader(
-    open(f"data/iterations/{MODEL}/combined-annotations.csv")
-):
+for score, _, _, label in csv.reader(open(f"data/iterations/{MODEL}/combined-annotations.csv")):
     X.append([float(score)])
     y.append(int(label))
 
@@ -31,13 +29,10 @@ y = np.array(y)
 print(X)
 print(y)
 clf = sklearn.linear_model.LogisticRegressionCV(
-    Cs=[10 ** i for i in range(-3, 3)],
-    cv=FOLDS,
-    scoring=SCORING,
-    random_state=42,
+    Cs=[10 ** i for i in range(-3, 3)], cv=FOLDS, scoring=SCORING, random_state=42,
 )
 clf.fit(X, y)
 
 print(np.mean(y))
 
-print(clf.predict_proba([[i/10] for i in range(11)]))
+print(clf.predict_proba([[i / 10] for i in range(11)]))
