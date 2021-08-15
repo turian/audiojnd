@@ -115,6 +115,8 @@ def annotate(model_name):
     try:
         while 1:
             print("Play A")
+            assert os.path.exists(a), a
+            assert os.path.exists(b), b
             os.system(f"{AUDIO_PLAYER} {a} > /dev/null 2>&1")
             oldf, newf, a, b, pairs = check_input(
                 pairs,

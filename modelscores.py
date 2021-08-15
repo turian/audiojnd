@@ -41,8 +41,8 @@ def process_files(model_name):
         oldf = os.path.split(oldf)[0]
         assert os.path.isfile(oldf)
 
-        if LENGTHRE.match(newf):
-            length = float(LENGTHRE.match(newf).group(1))
+        if LENGTHRE.match(oldf):
+            length = float(LENGTHRE.match(oldf).group(1))
             nsamples = dict(LENGTH_SAMPLES)[length]
         else:
             assert False
