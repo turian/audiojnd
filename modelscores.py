@@ -54,16 +54,10 @@ def process_files(model_name):
 
         # TODO: HOP SIZE
         oldemb, ts = torchopenl3.get_audio_embedding(
-            oldx,
-            CONFIG["SAMPLE_RATE"],
-            model=model,
-            hop_size=CONFIG["EMBEDDING_HOP_SIZE"],
+            oldx, CONFIG["SAMPLE_RATE"], model=model, hop_size=CONFIG["EMBEDDING_HOP_SIZE"],
         )
         newemb, ts = torchopenl3.get_audio_embedding(
-            newx,
-            CONFIG["SAMPLE_RATE"],
-            model=model,
-            hop_size=CONFIG["EMBEDDING_HOP_SIZE"],
+            newx, CONFIG["SAMPLE_RATE"], model=model, hop_size=CONFIG["EMBEDDING_HOP_SIZE"],
         )
         assert oldemb.shape == newemb.shape
 

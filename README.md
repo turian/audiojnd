@@ -6,8 +6,7 @@ Installation:
 ```
 # lameenc is cooler but harder to use
 sudo apt-get install -y lame libsox-fmt-all sox ffmpeg python3-pip unzip
-pip3 install -U pandas tqdm sox click pydub audiomentations[extras] sklearn soundfile pytorch-lightning nnAudio
-pip3 install git+https://github.com/turian/torchopenl3.git
+pip3 install -r requirements.txt
 ```
 
 Download impulse response:
@@ -37,4 +36,5 @@ Usage:
 ./get_backgroundnoise.py
 ./preprocess.py
 ./transforms.py
+./run.py
 ```

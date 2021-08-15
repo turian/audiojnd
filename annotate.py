@@ -72,9 +72,7 @@ def write_rows(goldcsv, goldrows):
         csvout.writerow(row)
 
 
-def check_input(
-    pairs, orig_pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name
-):
+def check_input(pairs, orig_pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name):
     c = stdscr.getch()
     if c == ord("a"):
         goldrows.append([oldf, newf, 0])
@@ -119,47 +117,20 @@ def annotate(model_name):
             assert os.path.exists(b), b
             os.system(f"{AUDIO_PLAYER} {a} > /dev/null 2>&1")
             oldf, newf, a, b, pairs = check_input(
-                pairs,
-                orig_pairs,
-                stdscr,
-                oldf,
-                newf,
-                a,
-                b,
-                goldcsv,
-                goldrows,
-                model_name,
+                pairs, orig_pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name,
             )
             if oldf == None:
                 break
             time.sleep(0.25)
             oldf, newf, a, b, pairs = check_input(
-                pairs,
-                orig_pairs,
-                stdscr,
-                oldf,
-                newf,
-                a,
-                b,
-                goldcsv,
-                goldrows,
-                model_name,
+                pairs, orig_pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name,
             )
             if oldf == None:
                 break
             print("Play B")
             os.system(f"{AUDIO_PLAYER} {b} > /dev/null 2>&1")
             oldf, newf, a, b, pairs = check_input(
-                pairs,
-                orig_pairs,
-                stdscr,
-                oldf,
-                newf,
-                a,
-                b,
-                goldcsv,
-                goldrows,
-                model_name,
+                pairs, orig_pairs, stdscr, oldf, newf, a, b, goldcsv, goldrows, model_name,
             )
             if oldf == None:
                 break

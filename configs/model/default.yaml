@@ -1,0 +1,3 @@
+input_repr: 'mel256'
+content_type: 'env'
+embedding_size: 6144

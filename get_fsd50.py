@@ -33,9 +33,7 @@ def get_fsd50k():
     os.system(
         "cd data/orig/ && zip -s 0 FSD50K.dev_audio.zip --out unsplit.zip && unzip unsplit.zip && rm unsplit.zip"
     )
-    os.system(
-        "cd data/orig/ && unzip FSD50K.metadata.zip",
-    )
+    os.system("cd data/orig/ && unzip FSD50K.metadata.zip",)
 
 
 if __name__ == "__main__":
